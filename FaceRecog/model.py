@@ -6,6 +6,7 @@ from FaceRecog.resnet import *      # noqa
 import time                         # noqa
 
 TRAIN_LOG = 'Train-log.txt'
+PARAMS = 'params'
 
 
 class CNN:
@@ -108,23 +109,55 @@ class CNN:
                                            filename_suffix='-step-%d' % global_step)
             for j in range(summary_step * 10):
                 x, y = train_data.get_batch(batch_size)
-                fetch = [self.train_op,
-                         self._cross_entropy_op,
-                         self._l2_loss_op,
-                         self._loss_op,
-                         self._top1_op,
-                         self._top2_op]
+                fetch = [self.train_op, self._cross_entropy_op, self._l2_loss_op, self._loss_op,
+                         self._top1_op, self._top2_op]
                 feed = {self.x: x, self.y: y, self.lr: lr, self.is_train: True}
                 _, c, l2, l, t1, t2 = sess.run(fetch, feed_dict=feed)
                 global_step = sess.run(global_step)
+                print('\rTraining - cross_entropy: %0.4f, l2_loss: %0.4f, loss: %0.4f, '
+                      'top1: %0.4f, top2: %0.4f, step: %d/%d'
+                      % (c, l2, l, t1, t2, base_step, global_step), end='')
 
                 if global_step % summary_step == 0 and global_step != 0:
+                    fetch = [self.merged, self._cross_entropy, self._l2_loss, self._loss,
+                             self._top1, self._top2]
+                    merged, c, l2, l, t1, t2 = sess.run(fetch)
+                    writer.add_summary(merged, global_step)
+                    print('\r', end='')
+                    print_write('Train summary write  cross_entropy: %0.4f, l2_loss: %0.4f, loss: %0.4f, '
+                                'top1: %0.4f, top2: %0.4f, step: %d/%d  %0.3f sec/step\n'
+                                % (c, l2, l, t1, t2, base_step, global_step, (time.time() - s) / summary_step),
+                                os.path.join(self.logdir, TRAIN_LOG), 'a')
+                    s = time.time()
+                    sess.run(self.local_var_init)
+
+            print_write('global step: %d, model save, time: %s\n'
+                        % (global_step, time.strftime('%y-%m-%d %H:%M:%S')),
+                        os.path.join(self.logdir, TRAIN_LOG), 'a')
+            writer.close()
+
+            self.saver.save(sess, os.path.join(self.logdir, 'step-%d' % global_step, PARAMS))
+            s = time.time()
+        return
+
+    def runs(self, sess, data, ckpt, batch_size):
+        s = time.time()
+        self.init_model(sess, ckpt)
 
 
 
-def print_write(s, f):
-    print(s, end='')
-    f.write(s)
+
+def print_write(s, file, mode=None):
+    if isinstance(file, str):
+        if mode is None:
+            mode = 'a'
+        f = open(file, mode)
+        print(s, end='')
+        f.write(s)
+        f.close()
+    else:
+        print(s, end='')
+        file.write(s)
 
 
 def get_tf_config():

@@ -43,9 +43,12 @@ if __name__ == "__main__":
 #       self.num_data = 데이터 개수
 #
 # def random_batch(batch_size):
+#       모델 학습용
 #       x = 랜덤한 batch_size개의 이미지 데이터    [batch_size, 128, 128, 3]
 #       y = 랜덤한 batch_size개의 레이블          [batch_size]
-#           당연히 이미지 데이터와 레이블이 매칭 되어야함
+#           이미지 데이터와 레이블이 매칭 되어야함
 #       return x, y
 #
 # def sequential_batch(batch_size):
+#       모델 테스트용
+#       return x
