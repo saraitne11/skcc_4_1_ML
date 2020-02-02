@@ -30,3 +30,22 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# TODO
+# ReadData 클래스로 만들기
+# example
+# class DataSet
+# def __init__(이미지파일 폴더, csv파일 경로):
+#       self.x = 이미지 데이터    [데이터 개수, 128, 128, 3]
+#       self.y = 이미지 레이블    [데이터 개수]    (int)
+#       self.file_name = 파일 이름  [데이터 개수] (문자열)
+#       self.num_data = 데이터 개수
+#
+# def random_batch(batch_size):
+#       x = 랜덤한 batch_size개의 이미지 데이터    [batch_size, 128, 128, 3]
+#       y = 랜덤한 batch_size개의 레이블          [batch_size]
+#           당연히 이미지 데이터와 레이블이 매칭 되어야함
+#       return x, y
+#
+# def sequential_batch(batch_size):
