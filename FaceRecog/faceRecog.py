@@ -5,6 +5,47 @@ import csv
 import random
 
 
+class DataSet:
+    def __init__(self):
+        imagePath = "../_Data/1. 얼굴사진분류 데이터/image_v2/face_images_128x128/"
+        csvPath = "../_Data/1. 얼굴사진분류 데이터/ml_8_faceclassifier_train.csv"
+
+        self.imageData = []
+        self.imageLable = []
+        self.fileName = []
+        self.numData = None
+        self.currentIdx = 0
+
+        f = open(csvPath, 'r', encoding="utf-8")
+        reader = list(csv.reader(f))
+        reader.pop(0)
+        f.close()
+        self.numData = len(reader)
+
+        for line in reader:
+            self.fileName.append(line[0])
+            self.imageLable.append(line[1])
+            tempImg = Image.open(imagePath + line[0], "r")
+            self.imageData.append(np.array(tempImg))
+
+    def random_batch(self, batch_size):
+        idx = random.sample(list(range(0, self.numData)), batch_size)
+        x = self.imageData[idx]
+        y = self.imageLable[idx]
+        return x, y
+
+    def sequential_batch(self, batch_size):
+        if self.currentIdx + batch_size <= self.numData:
+            x = self.imageData[self.currentIdx:][:self.currentIdx + batch_size]
+            y = self.imageLable[self.currentIdx:][:self.currentIdx + batch_size]
+            self.currentIdx += batch_size
+            return x, y, False, None
+        else:
+            x = self.imageData[self.currentIdx:]
+            y = self.imageLable[self.currentIdx:]
+            return x, y, True, "faceRecogResut.csv"
+
+
 def main():
     pass
 
@@ -31,38 +72,4 @@ if __name__ == "__main__":
 #
 # def sequential_batch(batch_size):
 #       모델 테스트용
-<<<<<<< Updated upstream
 #       return x, file_name   csv 만들어야 되니까
-=======
-#       return x
-
-
-class dataSet:
-
-    def __init__(self, imagePath, csvPath):
-        # imagePath = "../_Data/1. 얼굴사진분류 데이터/image_v2/face_images_128x128/"
-        # csvPath = "../_Data/1. 얼굴사진분류 데이터/ml_8_faceclassifier_train.csv"
-
-        self.imageData = []
-        self.imageLable = []
-        self.fileName = []
-        self.numData = None
-
-        f = open(csvPath, 'r', encoding="utf-8")
-        reader = list(csv.reader(f))
-        reader.pop(0)
-        f.close()
-        self.numData = len(reader)
-
-        for line in reader:
-            self.fileName.append(line[0])
-            self.imageLable.append(line[1])
-            img = Image.open(imagePath + line[0], "r")
-            self.imageData.append(np.array(img))
-
-    def randomBatch(self):
-        pass
-
-    def sequential_batch(self):
-        pass
->>>>>>> Stashed changes
