@@ -5,19 +5,22 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from FaceRecog.resnet import *      # noqa
 import time                         # noqa
 
-TRAIN_LOG = 'Train-log.txt'
+LOG_DIR = 'Logs'
+PARAMS_DIR = 'Params'
 PARAMS = 'params'
+TRAIN_LOG = 'Train_log.txt'
 
 
 class CNN:
-    def __init__(self, logdir, num_class, input_size, num_gpu,
+    def __init__(self, name, num_class, input_size,
                  weight_decay=1e-4, optimizer_momentum=0.9):
-        self.logdir = logdir + '/' if logdir[-1] != '/' else logdir
-        os.makedirs(self.logdir, exist_ok=True)
+        self.log_dir = os.path.join(LOG_DIR, name)
+        self.param_dir = os.path.join(PARAMS_DIR, name)
+        os.makedirs(self.log_dir, exist_ok=True)
+        os.makedirs(self.param_dir, exist_ok=True)
 
         self.input_size = input_size
         self.num_class = num_class
-        self.num_gpu = num_gpu
 
         self.global_step = tf.Variable(0, trainable=False)
         self.is_train = tf.placeholder(tf.bool)
@@ -69,15 +72,14 @@ class CNN:
 
     def init_model(self, sess, ckpt=None):
         if ckpt is not None:
-            f = open(self.logdir + TRAIN_LOG, 'a')
-            self.saver.restore(sess, self.logdir + ckpt)
-            print_write('model loaded from file: %s\n' % (self.logdir + ckpt), f)
-            f.close()
+            self.saver.restore(sess, os.path.join(self.param_dir, ckpt, PARAMS))
+            print_write('model loaded from file: %s\n' % os.path.join(self.log_dir, ckpt),
+                        os.path.join(self.log_dir, TRAIN_LOG), 'a')
         else:
-            f = open(self.logdir + TRAIN_LOG, 'w')
+            f = open(os.path.join(self.log_dir, TRAIN_LOG), 'w')
             sess.run(self.global_var_init)
             print_write('global_variables_initialize\n', f)
-            writer = tf.summary.FileWriter(self.logdir + 'train', filename_suffix='-graph')
+            writer = tf.summary.FileWriter(os.path.join(self.log_dir, 'train'), filename_suffix='-graph')
             writer.add_graph(sess.graph)
 
             print_write('============================================================\n', f)
@@ -86,12 +88,12 @@ class CNN:
                 name = var.name
                 shape = var.shape.as_list()
                 num_elements = var.shape.num_elements()
-                print_write('Variable name: %s\n' % (name), f)
-                print_write('Placed device: %s\n' % (var.device), f)
+                print_write('Variable name: %s\n' % name, f)
+                print_write('Placed device: %s\n' % var.device, f)
                 print_write('Shape : %s  Elements: %d\n' % (str(shape), num_elements), f)
                 print_write('============================================================\n', f)
                 count_vars = count_vars + num_elements
-            print_write('Total number of trainalbe variables %d\n' % (count_vars), f)
+            print_write('Total number of trainalbe variables %d\n' % count_vars, f)
             print_write('============================================================\n', f)
             f.close()
             writer.close()
@@ -105,7 +107,7 @@ class CNN:
         s = time.time()
         for i in range(train_step // (summary_step * 10)):
             sess.run(self.local_var_init)
-            writer = tf.summary.FileWriter(os.path.join(self.logdir, 'train'),
+            writer = tf.summary.FileWriter(os.path.join(self.log_dir, 'train'),
                                            filename_suffix='-step-%d' % global_step)
             for j in range(summary_step * 10):
                 x, y = train_data.get_batch(batch_size)
@@ -124,19 +126,19 @@ class CNN:
                     merged, c, l2, l, t1, t2 = sess.run(fetch)
                     writer.add_summary(merged, global_step)
                     print('\r', end='')
-                    print_write('Train summary write  cross_entropy: %0.4f, l2_loss: %0.4f, loss: %0.4f, '
+                    print_write('Train summary write - cross_entropy: %0.4f, l2_loss: %0.4f, loss: %0.4f, '
                                 'top1: %0.4f, top2: %0.4f, step: %d/%d  %0.3f sec/step\n'
                                 % (c, l2, l, t1, t2, base_step, global_step, (time.time() - s) / summary_step),
-                                os.path.join(self.logdir, TRAIN_LOG), 'a')
+                                os.path.join(self.log_dir, TRAIN_LOG), 'a')
                     s = time.time()
                     sess.run(self.local_var_init)
 
             print_write('global step: %d, model save, time: %s\n'
                         % (global_step, time.strftime('%y-%m-%d %H:%M:%S')),
-                        os.path.join(self.logdir, TRAIN_LOG), 'a')
+                        os.path.join(self.log_dir, TRAIN_LOG), 'a')
             writer.close()
 
-            self.saver.save(sess, os.path.join(self.logdir, 'step-%d' % global_step, PARAMS))
+            self.saver.save(sess, os.path.join(self.log_dir, 'step-%d' % global_step, PARAMS))
             s = time.time()
         return
 
@@ -144,6 +146,7 @@ class CNN:
         s = time.time()
         self.init_model(sess, ckpt)
         predictions = []
+        num_data = test_data.num_data
         end = False
         while not end:
             x, file_names = test_data.sequential_batch(batch_size)
@@ -153,10 +156,14 @@ class CNN:
                 print('len(file_names) %d != len(pred_idx) %d' % (len(file_names), len(pred_idx)))
                 return -1
 
+            print('\rTest - %d/%d' % (len(predictions), num_data), end='')
+
             for f, p in zip(file_names, pred_idx):
                 predictions.append([f, p])
 
         csv_save(csv_name, predictions)
+        print()
+        print('total time: %0.3f sec, %0.3f sec/image' % (time.time()-s, (time.time()-s/num_data)))
         return
 
 
@@ -174,7 +181,7 @@ def print_write(s, file, mode=None):
 
 
 def get_tf_config():
-    #config = tf.ConfigProto(log_device_placement=True)
+    # config = tf.ConfigProto(log_device_placement=True)
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     return config
@@ -182,3 +189,12 @@ def get_tf_config():
 
 def exclude_batch_norm(name):
     return 'batch_normalization' not in name
+
+
+def csv_save(file, pred):
+    f = open(file, 'w')
+    f.write('filename,prediction\n')
+    for n, p in pred:
+        f.write('%s,%s\n' % (n, p))
+    f.close()
+    return
