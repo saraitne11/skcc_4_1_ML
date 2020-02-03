@@ -1,15 +1,18 @@
 import csv
 import random
 import numpy as np
+import tensorflow as tf
 
 filePath = '../_data/ml_6_spacing_train.csv'
 
 ALPHABET = {c: i for i, c in enumerate('Pabcdefghijklmnopqrstuvwxyz')}
 PAD = 'P'
 
+
 def word2idx(word, max_len, dtype=np.uint8):
     word = word + PAD * (max_len-len(word))
     return np.array(list(map(lambda c: ALPHABET[c], word)), dtype=dtype)
+
 
 def readData(fileName):
     f = open(fileName, 'r', encoding='utf-8')
@@ -46,10 +49,13 @@ def readData(fileName):
         index += 1
     return alpha_indices, split_indices, word_compound
 
+
 class DataSet:
-    def __init__(self):
-        self.train_path = '../_data/ml_6_spacing_train.csv'
-        self.test_path = '../_data/ml_6_spacing_test.csv'
+    def __init__(self, train_path, test_path):
+        # self.train_path = '../_data/ml_6_spacing_train.csv'
+        # self.test_path = '../_data/ml_6_spacing_test.csv'
+        self.train_path = train_path
+        self.test_path = test_path
 
         self.x, self.y, self.compound = readData(self.train_path)
         self.seq_len = [len(i[0]) for i in self.compound]
@@ -76,30 +82,70 @@ class DataSet:
             return True, x
         return False, x
 
-if __name__ == '__main__':
-    dataSet = DataSet()
 
-# TODO
-# ReadData 클래스로 만들기
-# example
-# class DataSet
-# def __init__(csv 파일 경로):
-#       self.x = [데이터 개수, 가장 긴 복합어의 글자 개수]
-#                   [[5, 2, 3, 4, 2, 3, 0, 0, 0, 0], [6, 5, 4, 2, 1, 3, 0, 0, 0, 0], ...]
-#       self.y = [데이터 개수, 가장 긴 복합어의 글자 개수]
-#                   [[1, 0, 0, 0, 1, 0, 0, 0, 0, 0], [1, 0, 0, 1, 0, 0, 0, 0, 0, 0], ...]
-#       self.seq_len = []
-#       self.compounds = ['hamburger', ['ham', 'burger']]
-#       self.num_data = 데이터 개수
-#       self.sequential_index = 0
-#
-# def random_batch(batch_size):
-#       모델 학습용
-#       x = 랜덤한 batch_size개의 데이터    [batch_size, 128, 128, 3]
-#       y = 랜덤한 batch_size개의          [batch_size]
-#           이미지 데이터와 레이블이 매칭 되어야함
-#       return x, y
-#
-# def sequential_batch(batch_size):
-#       모델 테스트용
-#       return x
+def rnn_cell(cell, hidden, keep_prob, output_drop, state_drop):
+    if cell == 'LSTM':
+        cell = tf.nn.rnn_cell.LSTMCell(hidden, state_is_tuple=True)
+    elif cell == 'GRU':
+        cell = tf.nn.rnn_cell.GRUCell(hidden)
+    elif cell == 'RNN':
+        cell = tf.nn.rnn_cell.RNNCell(hidden)
+    else:
+        raise TypeError('cell name error')
+
+    if output_drop and state_drop:
+        cell = tf.nn.rnn_cell.DropoutWrapper(cell,
+                                             output_keep_prob=keep_prob,
+                                             state_keep_prob=keep_prob,
+                                             variational_recurrent=True,
+                                             dtype=tf.float32)
+    elif output_drop:
+        cell = tf.nn.rnn_cell.DropoutWrapper(cell,
+                                             output_keep_prob=keep_prob,
+                                             dtype=tf.float32)
+    elif state_drop:
+        cell = tf.nn.rnn_cell.DropoutWrapper(cell,
+                                             state_keep_prob=keep_prob,
+                                             variational_recurrent=True,
+                                             dtype=tf.float32)
+    else:
+        pass
+    return cell
+
+
+def rnn_cells(cell_type,
+              hidden_list,
+              keep_prob,
+              output_drop=True,
+              state_drop=True):
+    multi_cell = []
+    for hidden in hidden_list:
+        cell = rnn_cell(cell_type, hidden, keep_prob, output_drop, state_drop)
+        multi_cell.append(cell)
+    return multi_cell
+
+
+def get_tf_config():
+    config = tf.ConfigProto(allow_soft_placement=True)
+    # config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    return config
+
+
+def print_write(s, file, mode=None):
+    if isinstance(file, str):
+        if mode is None:
+            mode = 'a'
+        f = open(file, mode)
+        print(s, end='')
+        f.write(s)
+        f.close()
+    else:
+        print(s, end='')
+        file.write(s)
+
+
+if __name__ == '__main__':
+    dataSet = DataSet('../_Data/ml_6_spacing_train.csv', '../_Data/ml_6_spacing_test.csv')
+    print(dataSet.random_batch(16))
+
