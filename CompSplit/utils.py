@@ -8,7 +8,6 @@ filePath = '../_data/ml_6_spacing_train.csv'
 ALPHABET = {c: i for i, c in enumerate('Pabcdefghijklmnopqrstuvwxyz')}
 PAD = 'P'
 
-
 def word2idx(word, max_len, dtype=np.uint8):
     word = word + PAD * (max_len-len(word))
     return np.array(list(map(lambda c: ALPHABET[c], word)), dtype=dtype)
@@ -143,6 +142,35 @@ def print_write(s, file, mode=None):
     else:
         print(s, end='')
         file.write(s)
+
+def idx2chr(index):
+    return chr(ord('a') + index - 1)
+
+def idx2word(indices):
+    word = ''
+    for char in indices:
+        word += idx2chr(char)
+    return word
+
+def expectation_to_compound(word, location):
+    word = np.array(word)
+    length = np.where(word == 0)[0]
+    if len(length) == 0:
+        length = len(word)
+    else:
+        length = length[0]
+    compound = idx2word(word[:length])
+    compounds = []
+
+    location = np.array(location)
+    indices = np.where(location == 1)[0]
+    idx = 0
+    for index in indices[1:]:
+        compounds.append(compound[idx:index])
+        idx = index
+    compounds.append(compound[idx:length])
+
+    return [compound, compounds]
 
 
 if __name__ == '__main__':
