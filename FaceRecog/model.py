@@ -126,7 +126,7 @@ class CNN:
                     merged, c, l2, l, t1, t2 = sess.run(fetch)
                     writer.add_summary(merged, global_step)
                     print('\r', end='')
-                    print_write('Train summary write - cross_entropy: %0.4f, l2_loss: %0.4f, loss: %0.4f, '
+                    print_write('Training - cross_entropy: %0.4f, l2_loss: %0.4f, loss: %0.4f, '
                                 'top1: %0.4f, top2: %0.4f, step: %d/%d  %0.3f sec/step\n'
                                 % (c, l2, l, t1, t2, base_step, global_step, (time.time() - s) / summary_step),
                                 os.path.join(self.log_dir, TRAIN_LOG), 'a')
