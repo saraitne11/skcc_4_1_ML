@@ -51,4 +51,4 @@ if __name__ == "__main__":
 #
 # def sequential_batch(batch_size):
 #       모델 테스트용
-#       return x
+#       return x, file_name   csv 만들어야 되니까

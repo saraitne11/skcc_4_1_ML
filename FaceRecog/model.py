@@ -140,11 +140,24 @@ class CNN:
             s = time.time()
         return
 
-    def runs(self, sess, data, ckpt, batch_size):
+    def runs(self, sess, test_data, ckpt, batch_size, csv_name='result.csv'):
         s = time.time()
         self.init_model(sess, ckpt)
+        predictions = []
+        end = False
+        while not end:
+            x, file_names = test_data.sequential_batch(batch_size)
+            pred_idx = sess.run(self.prediction, feed_dict={self.x: x})
 
+            if len(file_names) != len(pred_idx):
+                print('len(file_names) %d != len(pred_idx) %d' % (len(file_names), len(pred_idx)))
+                return -1
 
+            for f, p in zip(file_names, pred_idx):
+                predictions.append([f, p])
+
+        csv_save(csv_name, predictions)
+        return
 
 
 def print_write(s, file, mode=None):
