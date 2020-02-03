@@ -3,6 +3,7 @@ import numpy as np
 import os
 import csv
 import random
+import tensorflow as tf
 
 
 class DataSet:
@@ -50,6 +51,40 @@ class DataSet:
             x = self.imageData[self.currentIdx:]
             y = self.imageLable[self.currentIdx:]
             return x, y, True, "faceRecogResut.csv"
+
+
+def print_write(s, file, mode=None):
+    if isinstance(file, str):
+        if mode is None:
+            mode = 'a'
+        f = open(file, mode)
+        print(s, end='')
+        f.write(s)
+        f.close()
+    else:
+        print(s, end='')
+        file.write(s)
+
+
+def get_tf_config():
+    # config = tf.ConfigProto(log_device_placement=True)
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    return config
+
+
+def exclude_batch_norm(name):
+    return 'batch_normalization' not in name
+
+
+def csv_save(file, pred):
+    f = open(file, 'w')
+    f.write('filename,prediction\n')
+    for n, p in pred:
+        f.write('%s,%s\n' % (n, p))
+    f.close()
+    return
+
 
 
 def main():

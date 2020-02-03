@@ -3,6 +3,7 @@ import os
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from FaceRecog.resnet import *      # noqa
+from FaceRecog.utils import *       # noqa
 import time                         # noqa
 
 LOG_DIR = 'Logs'
@@ -165,36 +166,3 @@ class CNN:
         print()
         print('total time: %0.3f sec, %0.3f sec/image' % (time.time()-s, (time.time()-s/num_data)))
         return
-
-
-def print_write(s, file, mode=None):
-    if isinstance(file, str):
-        if mode is None:
-            mode = 'a'
-        f = open(file, mode)
-        print(s, end='')
-        f.write(s)
-        f.close()
-    else:
-        print(s, end='')
-        file.write(s)
-
-
-def get_tf_config():
-    # config = tf.ConfigProto(log_device_placement=True)
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    return config
-
-
-def exclude_batch_norm(name):
-    return 'batch_normalization' not in name
-
-
-def csv_save(file, pred):
-    f = open(file, 'w')
-    f.write('filename,prediction\n')
-    for n, p in pred:
-        f.write('%s,%s\n' % (n, p))
-    f.close()
-    return
