@@ -1,22 +1,12 @@
 from PIL import Image
 import numpy as np
-import os
 import csv
 import random
 import tensorflow as tf
 
 
 class DataSet:
-    def __init__(self):
-        imagePath = "../_Data/1. 얼굴사진분류 데이터/image_v2/face_images_128x128/"
-        csvPath = "../_Data/1. 얼굴사진분류 데이터/ml_8_faceclassifier_train.csv"
-
-        self.imageData = None
-        self.imageLable = None
-        self.fileName = []
-        self.numData = None
-        self.currentIdx = 0
-
+    def __init__(self, imagePath, csvPath):
         f = open(csvPath, 'r', encoding="utf-8")
         reader = list(csv.reader(f))
         reader.pop(0)
@@ -25,15 +15,15 @@ class DataSet:
 
         self.imageData = np.zeros([self.numData, 128, 128, 3], dtype=np.uint8)
         self.imageLable = np.zeros([self.numData], dtype=np.uint8)
+        self.fileName = []
+        self.numData = None
+        self.currentIdx = 0
 
         for i, line in enumerate(reader):
-            try:
-                tempImg = Image.open(imagePath + line[0], "r")
-                self.fileName.append(line[0])
-                self.imageData[i, :] = np.array(tempImg)
-                self.imageLable[i] = np.array(line[1])
-            except ValueError:
-                print("face_" + str(i) + ".png 파일은 RGB가 아니고 RGBA 입니다")
+            tempImg = Image.open(imagePath + line[0], "r").convert('RGB')
+            self.imageData[i, :] = np.array(tempImg)
+            self.imageLable[i] = np.array(line[1])
+            self.fileName.append(line[0])
 
     def random_batch(self, batch_size):
         idx = random.sample(list(range(0, self.numData)), batch_size)
@@ -86,9 +76,10 @@ def csv_save(file, pred):
     return
 
 
-
 def main():
-    datee = DataSet()
+    imagePath = "../_Data/1. 얼굴사진분류 데이터/image_v2/face_images_128x128/"
+    csvPath = "../_Data/1. 얼굴사진분류 데이터/ml_8_faceclassifier_train.csv"
+    datee = DataSet(imagePath, csvPath)
 
 
 if __name__ == "__main__":
