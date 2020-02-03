@@ -63,8 +63,6 @@ class DataSet:
 
     def random_batch(self, batch_size):
         choose = random.sample(list(range(0, self.num_data)), batch_size)
-        # x = np.array(self.x)[choose]
-        # y = np.array(self.y)[choose]
         x = self.x[choose]
         y = self.y[choose]
 
@@ -75,9 +73,8 @@ class DataSet:
         self.sequential_index += batch_size
 
         if (self.sequential_index >= self.test_num_data):
-            return False, x
-
-        return True, x
+            return True, x
+        return False, x
 
 if __name__ == '__main__':
     dataSet = DataSet()
