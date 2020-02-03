@@ -188,7 +188,7 @@ class BiLstmCrf:
             writer.close()
         return
 
-    def train(self, sess, train_data, train_step, lr, batch_size, keep_prob, ckpt=None, summary_step=1000):
+    def train(self, sess, train_data, train_step, lr, batch_size, keep_prob, ckpt=None, summary_step=100):
         self.init_model(sess, ckpt)
         global_step = sess.run(self.global_step)
         base_step = global_step
@@ -199,31 +199,33 @@ class BiLstmCrf:
             writer = tf.summary.FileWriter(os.path.join(self.log_dir, 'train'),
                                            filename_suffix='-step-%d' % global_step)
             for j in range(summary_step * 10):
-                x, y = train_data.get_batch(batch_size)
+                x, y, seq_len = train_data.random_batch(batch_size)
                 fetch = [self.train_op, self._loss_op, self._acc_op]
-                feed = {self.x: x, self.y: y, self.lr: lr, self.keep_prob: keep_prob}
+                feed = {self.x: x, self.y: y, self.seq_len: seq_len, self.lr: lr, self.keep_prob: keep_prob}
                 _, loss, acc = sess.run(fetch, feed_dict=feed)
-                global_step = sess.run(global_step)
+                global_step = sess.run(self.global_step)
                 print('\rTraining - Loss: %0.3f, Accuracy: %0.3f, step: %d/%d'
-                      % (loss, acc, base_step, global_step), end='')
+                      % (loss, acc, global_step, base_step+train_step), end='')
 
                 if global_step % summary_step == 0 and global_step != 0:
                     fetch = [self.train_merged, self._loss, self._acc]
-                    merged, loss, acc = sess.run(fetch)
+                    merged, loss, acc = sess.run(fetch, feed_dict={self.lr: lr, self.keep_prob: keep_prob})
                     writer.add_summary(merged, global_step)
                     print('\r', end='')
                     print_write('Training - Loss: %0.3f, Accuracy: %0.3f step: %d/%d  %0.3f sec/step\n'
-                                % (loss, acc, base_step, global_step, (time.time() - s) / summary_step),
+                                % (loss, acc, global_step, base_step+train_step, (time.time() - s) / summary_step),
                                 os.path.join(self.log_dir, TRAIN_LOG), 'a')
                     s = time.time()
                     sess.run(self.local_var_init)
 
-            print_write('global step: %d, model save, time: %s\n'
-                        % (global_step, time.strftime('%y-%m-%d %H:%M:%S')),
+            print_write('global step: %d, model save %s, time: %s\n'
+                        % (global_step,
+                           os.path.join(self.param_dir, 'step-%d' % global_step, PARAMS),
+                           time.strftime('%y-%m-%d %H:%M:%S')),
                         os.path.join(self.log_dir, TRAIN_LOG), 'a')
             writer.close()
 
-            self.saver.save(sess, os.path.join(self.log_dir, 'step-%d' % global_step, PARAMS))
+            self.saver.save(sess, os.path.join(self.param_dir, 'step-%d' % global_step, PARAMS))
             s = time.time()
         return
 
@@ -234,18 +236,19 @@ class BiLstmCrf:
         num_data = test_data.num_data
         end = False
         while not end:
-            x, file_names = test_data.sequential_batch(batch_size)
-            pred_idx = sess.run(self.prediction, feed_dict={self.x: x})
+            x, seq_len, end = test_data.sequential_batch(batch_size)
+            pred_idx = sess.run(self.prediction,
+                                feed_dict={self.x: x, self.seq_len: seq_len, self.keep_prob: 1.0})
 
-            if len(file_names) != len(pred_idx):
-                print('len(file_names) %d != len(pred_idx) %d' % (len(file_names), len(pred_idx)))
+            if len(x) != len(pred_idx):
+                print('len(file_names) %d != len(pred_idx) %d' % (len(x), len(pred_idx)))
                 return -1
 
             print('\rTest - %d/%d' % (len(predictions), num_data), end='')
 
-            for f, p in zip(file_names, pred_idx):
-                predictions.append([f, p])
-
+            for x, p in zip(x, pred_idx):
+                predictions.append([x, p])
+                print(x, p)
         # csv_save(csv_name, predictions)
         print()
         print('total time: %0.3f sec, %0.3f sec/image' % (time.time()-s, (time.time()-s/num_data)))

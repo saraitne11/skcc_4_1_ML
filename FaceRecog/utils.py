@@ -33,14 +33,14 @@ class DataSet:
 
     def sequential_batch(self, batch_size):
         if self.currentIdx + batch_size <= self.numData:
-            x = self.imageData[self.currentIdx:][:self.currentIdx + batch_size]
-            y = self.imageLable[self.currentIdx:][:self.currentIdx + batch_size]
+            x = self.imageData[self.currentIdx:self.currentIdx + batch_size]
+            n = self.fileName[self.currentIdx:self.currentIdx + batch_size]
             self.currentIdx += batch_size
-            return x, y, False, None
+            return x, n, False
         else:
             x = self.imageData[self.currentIdx:]
-            y = self.imageLable[self.currentIdx:]
-            return x, y, True, "faceRecogResut.csv"
+            n = self.fileName[self.currentIdx:]
+            return x, n, True
 
 
 def print_write(s, file, mode=None):

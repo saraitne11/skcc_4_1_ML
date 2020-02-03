@@ -4,10 +4,10 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-from CompSplit.model import *       # noqa
+from FaceRecog.model import *       # noqa
 
 
-dataset = DataSet('../_Data/ml_6_spacing_train.csv', '../_Data/ml_6_spacing_test.csv')
+dataset = DataSet('../_Data/face_images_128x128/', '../_Data/ml_8_faceclassifier_train.csv')
 
 
 args = Arguments('LSTM', [300, 300], True, True, 100)
