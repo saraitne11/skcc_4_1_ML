@@ -7,11 +7,9 @@ filePath = '../_data/ml_6_spacing_train.csv'
 ALPHABET = {c: i for i, c in enumerate('Pabcdefghijklmnopqrstuvwxyz')}
 PAD = 'P'
 
-
 def word2idx(word, max_len, dtype=np.uint8):
     word = word + PAD * (max_len-len(word))
     return np.array(list(map(lambda c: ALPHABET[c], word)), dtype=dtype)
-
 
 def readData(fileName):
     f = open(fileName, 'r', encoding='utf-8')
@@ -48,7 +46,6 @@ def readData(fileName):
         index += 1
     return alpha_indices, split_indices, word_compound
 
-
 class DataSet:
     def __init__(self):
         self.train_path = '../_data/ml_6_spacing_train.csv'
@@ -66,8 +63,6 @@ class DataSet:
 
     def random_batch(self, batch_size):
         choose = random.sample(list(range(0, self.num_data)), batch_size)
-        # x = np.array(self.x)[choose]
-        # y = np.array(self.y)[choose]
         x = self.x[choose]
         y = self.y[choose]
 
@@ -78,10 +73,8 @@ class DataSet:
         self.sequential_index += batch_size
 
         if (self.sequential_index >= self.test_num_data):
-            return False, x
-
-        return True, x
-
+            return True, x
+        return False, x
 
 if __name__ == '__main__':
     dataSet = DataSet()
