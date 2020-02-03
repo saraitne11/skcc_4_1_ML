@@ -22,11 +22,11 @@ def readData(fileName):
     max_len = 0
     compounds = [i[0] for i in lines[1:]]
     for word in compounds:
-        if (max_len < len(word)):
+        if max_len < len(word):
             max_len = len(word)
 
     flag = True
-    if (len(lines[0]) == 1):
+    if len(lines[0]) == 1:
         flag = False
 
     alpha_indices = np.ones((len(compounds), max_len), dtype=np.uint8)
@@ -37,10 +37,10 @@ def readData(fileName):
     for line in lines[1:]:
         word_compound.append([line[0], []])
         alpha_indices[index] = word2idx(line[0], max_len)
-        if (flag):
+        if flag:
             inner_index = 0
             for data in line[1:]:
-                if (len(data) == 0):
+                if len(data) == 0:
                     break
                 else:
                     split_indices[index][inner_index] = 1
@@ -74,11 +74,11 @@ class DataSet:
 
         return x, y
 
-    def sequentital_batch(self, batch_size):
+    def sequential_batch(self, batch_size):
         x = self.test_x[self.sequential_index:][:batch_size]
         self.sequential_index += batch_size
 
-        if (self.sequential_index >= self.test_num_data):
+        if self.sequential_index >= self.test_num_data:
             return True, x
         return False, x
 
