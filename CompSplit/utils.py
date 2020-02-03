@@ -58,11 +58,11 @@ class DataSet:
         self.test_path = test_path
 
         self.x, self.y, self.compound = readData(self.train_path)
-        self.seq_len = [len(i[0]) for i in self.compound]
+        self.seq_len = np.array([len(i[0]) for i in self.compound])
         self.num_data = len(self.x)
 
         self.test_x, self.test_y, self.test_compound = readData(self.test_path)
-        self.test_seq_len = [len(i[0]) for i in self.test_compound]
+        self.test_seq_len = np.array([len(i[0]) for i in self.test_compound])
         self.test_num_data = len(self.test_x)
 
         self.sequential_index = 0
@@ -71,16 +71,16 @@ class DataSet:
         choose = random.sample(list(range(0, self.num_data)), batch_size)
         x = self.x[choose]
         y = self.y[choose]
-
-        return x, y
+        seq_len = self.seq_len[choose]
+        return x, y, seq_len
 
     def sequential_batch(self, batch_size):
-        x = self.test_x[self.sequential_index:][:batch_size]
+        x = self.test_x[self.sequential_index: self.sequential_index + batch_size]
+        seq_len = self.test_seq_len[self.sequential_index: self.sequential_index + batch_size]
         self.sequential_index += batch_size
-
         if self.sequential_index >= self.test_num_data:
-            return True, x
-        return False, x
+            return x, seq_len, True
+        return x, seq_len, False
 
 
 def rnn_cell(cell, hidden, keep_prob, output_drop, state_drop):
