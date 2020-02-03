@@ -248,8 +248,8 @@ class BiLstmCrf:
 
             for x, p in zip(x, pred_idx):
                 predictions.append([x, p])
-                print(x, p)
-        # csv_save(csv_name, predictions)
+
+        csv_save(csv_name, predictions)
         print()
         print('total time: %0.3f sec, %0.3f sec/image' % (time.time()-s, (time.time()-s/num_data)))
         return

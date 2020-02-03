@@ -143,14 +143,17 @@ def print_write(s, file, mode=None):
         print(s, end='')
         file.write(s)
 
+
 def idx2chr(index):
     return chr(ord('a') + index - 1)
+
 
 def idx2word(indices):
     word = ''
     for char in indices:
         word += idx2chr(char)
     return word
+
 
 def expectation_to_compound(word, location):
     word = np.array(word)
@@ -160,17 +163,31 @@ def expectation_to_compound(word, location):
     else:
         length = length[0]
     compound = idx2word(word[:length])
-    compounds = []
+    compounds = ['', '', '']
 
     location = np.array(location)
     indices = np.where(location == 1)[0]
     idx = 0
+    iidx = 0
     for index in indices[1:]:
-        compounds.append(compound[idx:index])
+        compounds[iidx] = (compound[idx:index])
         idx = index
-    compounds.append(compound[idx:length])
+        iidx += 1
+    compounds[iidx] = (compound[idx:length])
 
-    return [compound, compounds]
+    return compound, compounds
+
+
+def csv_save(csv_name, predictions):
+    f = open(csv_name, 'w')
+    f.write('compound,n1,n2,n3\n')
+    for x, p in predictions:
+        comp, comps = expectation_to_compound(x, p)
+        f.write('%s,' % comp)
+        for w in comps[:-1]:
+            f.write('%s,' % w)
+        f.write('%s' % comps[-1])
+        f.write('\n')
 
 
 if __name__ == '__main__':

@@ -13,15 +13,15 @@ class DataSet:
         f.close()
         self.numData = len(reader)
 
-        self.imageData = np.zeros([self.numData, 128, 128, 3], dtype=np.uint8)
+        self.imageData = np.zeros([self.numData, 128, 128, 3], dtype=np.float32)
         self.imageLable = np.zeros([self.numData], dtype=np.uint8)
         self.fileName = []
-        self.numData = None
         self.currentIdx = 0
 
         for i, line in enumerate(reader):
             tempImg = Image.open(imagePath + line[0], "r").convert('RGB')
-            self.imageData[i, :] = np.array(tempImg)
+            # self.imageData[i, :] = np.array(tempImg)
+            self.imageData[i, :] = np.array(tempImg) / 255.0
             self.imageLable[i] = np.array(line[1])
             self.fileName.append(line[0])
 

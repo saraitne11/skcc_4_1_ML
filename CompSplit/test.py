@@ -14,6 +14,6 @@ args = Arguments('LSTM', [300, 300], True, True, 100)
 splitter = BiLstmCrf('model1', args)
 
 sess = tf.Session(config=get_tf_config())
-splitter.runs(sess, dataset, 'step-3000', 128)
+splitter.runs(sess, dataset, 'step-1000', 128)
 
 sess.close()
