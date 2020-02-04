@@ -12,7 +12,7 @@ dataset = DataSet('../_Data/face_images_128x128/', '../_Data/ml_8_faceclassifier
 classifier = CNN('resnet17', 5, [128, 128, 3])
 
 sess = tf.Session(config=get_tf_config())
-classifier.train(sess, dataset, 5000, 1e-4, 64)
-classifier.train(sess, dataset, 10000, 1e-5, 64, ckpt='step-5000')
+classifier.train(sess, dataset, 2000, 1e-4, 64)
+classifier.train(sess, dataset, 8000, 1e-5, 64, ckpt='step-2000')
 
 sess.close()
