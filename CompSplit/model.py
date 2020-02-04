@@ -64,7 +64,7 @@ class BiLstmCrf:
         self.hyper_params = args
 
         self.input_dim = len(ALPHABET)
-        self.output_dim = len([0, 1])
+        self.output_dim = len([0, 1, 2])
 
         # [batch size, sequence length]
         self.x = tf.placeholder(tf.int32, [None, None], name='x')
@@ -233,7 +233,7 @@ class BiLstmCrf:
         s = time.time()
         self.init_model(sess, ckpt)
         predictions = []
-        num_data = test_data.num_data
+        num_data = test_data.test_num_data
         end = False
         while not end:
             x, seq_len, end = test_data.sequential_batch(batch_size)
@@ -251,5 +251,5 @@ class BiLstmCrf:
 
         csv_save(csv_name, predictions)
         print()
-        print('total time: %0.3f sec, %0.3f sec/image' % (time.time()-s, (time.time()-s/num_data)))
+        print('total time: %0.3f sec, %0.3f sec/word' % (time.time()-s, (time.time()-s)/num_data))
         return

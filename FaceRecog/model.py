@@ -26,7 +26,8 @@ class CNN:
         self.global_step = tf.Variable(0, trainable=False)
         self.is_train = tf.placeholder(tf.bool)
         self.lr = tf.placeholder(tf.float32)
-        optimizer = tf.train.MomentumOptimizer(self.lr, momentum=optimizer_momentum)
+        # optimizer = tf.train.MomentumOptimizer(self.lr, momentum=optimizer_momentum)
+        optimizer = tf.train.AdamOptimizer(self.lr)
 
         self.x = tf.placeholder(tf.float32, [None] + self.input_size, name='X')
         self.y = tf.placeholder(tf.int32, [None], name='Y')
@@ -162,5 +163,5 @@ class CNN:
 
         csv_save(csv_name, predictions)
         print()
-        print('total time: %0.3f sec, %0.3f sec/image' % (time.time()-s, (time.time()-s/num_data)))
+        print('total time: %0.3f sec, %0.3f sec/image' % (time.time()-s, (time.time()-s)/num_data))
         return
