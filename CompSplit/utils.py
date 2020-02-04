@@ -184,11 +184,7 @@ def csv_save(csv_name, predictions):
     f.write('compound,n1,n2,n3\n')
     for x, p in predictions:
         comp, comps = expectation_to_compound(x, p)
-        f.write('%s,' % comp)
-        for w in comps[:-1]:
-            f.write('%s,' % w)
-        f.write('%s' % comps[-1])
-        f.write('\n')
+        f.write('%s,%s,%s,%s\n' % (comp, comps[0], comps[1], comps[2]))
 
 
 if __name__ == '__main__':
