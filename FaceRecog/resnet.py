@@ -79,11 +79,6 @@ def build_resnet(X, is_train, num_class):
                                      batch_norm_decay, batch_norm_epsilon, name='res_block2')
     net = residual_block(net, 128, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block3')
 
-    net = residual_block_down_sample(net, 256, is_train,
-                                     batch_norm_decay, batch_norm_epsilon, name='res_block4')
-    net = residual_block(net, 256, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block5')
-    net = residual_block(net, 256, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block6')
-
     net = tf.reduce_mean(net, [1, 2])  # global average pooling
     logit = tf.layers.dense(net, num_class, kernel_initializer=tf.initializers.variance_scaling(), name='logit')
     return logit
