@@ -45,6 +45,7 @@ def readData(fileName):
                     split_indices[index][inner_index] = 1
                     word_compound[index][1].append(data)
                     inner_index += len(data)
+                    split_indices[index][inner_index - 1] = 2
         index += 1
     return alpha_indices, split_indices, word_compound
 
