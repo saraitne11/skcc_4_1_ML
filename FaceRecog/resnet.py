@@ -62,23 +62,72 @@ def residual_block_down_sample(x,
     return tf.nn.relu(h2 + x)
 
 
-def build_resnet(X, is_train, num_class):
+def build_resnet17(X, is_train, num_class):
     batch_norm_decay = 0.997
     batch_norm_epsilon = 1e-5
-    net = tf.layers.conv2d(X, 64, [3, 3], strides=[2, 2], padding='SAME', use_bias=False,
+    net = tf.layers.conv2d(X, 256, [3, 3], strides=[2, 2], padding='SAME', use_bias=False,
                            kernel_initializer=tf.initializers.variance_scaling(),
                            name='stem_conv1')
     net = tf.layers.batch_normalization(net, momentum=batch_norm_decay, epsilon=batch_norm_epsilon,
                                         training=is_train, fused=True, name='stem_batch_normalization')
     net = tf.nn.relu(net, name='stem_relu')
-    net = tf.layers.max_pooling2d(net, [3, 3], strides=[2, 2], padding='SAME', name='stem_pool')
 
-    net = residual_block(net, 64, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block1')
-
-    net = residual_block_down_sample(net, 128, is_train,
-                                     batch_norm_decay, batch_norm_epsilon, name='res_block2')
-    net = residual_block(net, 128, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block3')
+    net = residual_block_down_sample(net, 512, is_train,
+                                     batch_norm_decay, batch_norm_epsilon, name='res_block1')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block2')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block3')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block4')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block5')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block6')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block7')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block8')
 
     net = tf.reduce_mean(net, [1, 2])  # global average pooling
     logit = tf.layers.dense(net, num_class, kernel_initializer=tf.initializers.variance_scaling(), name='logit')
     return logit
+
+
+def build_resnet13(X, is_train, num_class):
+    batch_norm_decay = 0.997
+    batch_norm_epsilon = 1e-5
+    net = tf.layers.conv2d(X, 256, [3, 3], strides=[2, 2], padding='SAME', use_bias=False,
+                           kernel_initializer=tf.initializers.variance_scaling(),
+                           name='stem_conv1')
+    net = tf.layers.batch_normalization(net, momentum=batch_norm_decay, epsilon=batch_norm_epsilon,
+                                        training=is_train, fused=True, name='stem_batch_normalization')
+    net = tf.nn.relu(net, name='stem_relu')
+
+    net = residual_block_down_sample(net, 512, is_train,
+                                     batch_norm_decay, batch_norm_epsilon, name='res_block1')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block2')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block3')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block4')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block5')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block6')
+
+    net = tf.reduce_mean(net, [1, 2])  # global average pooling
+    logit = tf.layers.dense(net, num_class, kernel_initializer=tf.initializers.variance_scaling(), name='logit')
+    return logit
+
+
+def build_resnet9(X, is_train, num_class):
+    batch_norm_decay = 0.997
+    batch_norm_epsilon = 1e-5
+    net = tf.layers.conv2d(X, 256, [3, 3], strides=[2, 2], padding='SAME', use_bias=False,
+                           kernel_initializer=tf.initializers.variance_scaling(),
+                           name='stem_conv1')
+    net = tf.layers.batch_normalization(net, momentum=batch_norm_decay, epsilon=batch_norm_epsilon,
+                                        training=is_train, fused=True, name='stem_batch_normalization')
+    net = tf.nn.relu(net, name='stem_relu')
+
+    net = residual_block_down_sample(net, 512, is_train,
+                                     batch_norm_decay, batch_norm_epsilon, name='res_block1')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block2')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block3')
+    net = residual_block(net, 512, is_train, batch_norm_decay, batch_norm_epsilon, name='res_block4')
+
+    net = tf.reduce_mean(net, [1, 2])  # global average pooling
+    logit = tf.layers.dense(net, num_class, kernel_initializer=tf.initializers.variance_scaling(), name='logit')
+    return logit
+
+

@@ -14,7 +14,7 @@ TRAIN_LOG = 'Train_log.txt'
 
 class CNN:
     def __init__(self, name, num_class, input_size,
-                 weight_decay=1e-4, optimizer_momentum=0.9):
+                 weight_decay=1e-4):
         self.log_dir = os.path.join(LOG_DIR, name)
         self.param_dir = os.path.join(PARAMS_DIR, name)
         os.makedirs(self.log_dir, exist_ok=True)
@@ -26,13 +26,20 @@ class CNN:
         self.global_step = tf.Variable(0, trainable=False)
         self.is_train = tf.placeholder(tf.bool)
         self.lr = tf.placeholder(tf.float32)
-        # optimizer = tf.train.MomentumOptimizer(self.lr, momentum=optimizer_momentum)
         optimizer = tf.train.AdamOptimizer(self.lr)
 
         self.x = tf.placeholder(tf.float32, [None] + self.input_size, name='X')
         self.y = tf.placeholder(tf.int32, [None], name='Y')
 
-        logit = build_resnet(self.x, self.is_train, self.num_class)
+        self.x = tf.cond(self.is_train, lambda: images_augment(self.x), lambda: self.x)
+
+        if name == 'resnet17':
+            logit = build_resnet17(self.x, self.is_train, self.num_class)
+        elif name == 'resnet13':
+            logit = build_resnet13(self.x, self.is_train, self.num_class)
+        else:
+            logit = build_resnet9(self.x, self.is_train, self.num_class)
+
         y_one_hot = tf.one_hot(self.y, self.num_class)
         cross_entropy = tf.losses.softmax_cross_entropy(y_one_hot, logit)
         l2_norm = weight_decay * tf.add_n([tf.nn.l2_loss(tf.cast(v, tf.float32))

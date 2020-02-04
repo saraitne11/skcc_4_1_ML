@@ -10,8 +10,8 @@ from CompSplit.model import *       # noqa
 dataset = DataSet('../_Data/ml_6_spacing_train.csv', '../_Data/ml_6_spacing_test.csv')
 
 
-args = Arguments('LSTM', [100, 100], True, True, 30)
-splitter = BiLstmCrf('model2', args)
+args = Arguments('LSTM', [300, 300], True, True, 100)
+splitter = BiLstmCrf('model3', args)
 
 sess = tf.Session(config=get_tf_config())
 splitter.train(sess, dataset, 1000, 1e-3, 64, 0.7)
