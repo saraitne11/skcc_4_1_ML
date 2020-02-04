@@ -3,10 +3,8 @@ import random
 import numpy as np
 # import tensorflow as tf
 
-filePath = '../_data/ml_6_spacing_train.csv'
 
-ALPHABET = {c: i for i, c in enumerate('Pabcdefghijklmnopqrstuvwxyz')}
-PAD = 'P'
+
 
 def word2idx(word, max_len, dtype=np.uint8):
     word = word + PAD * (max_len-len(word))
