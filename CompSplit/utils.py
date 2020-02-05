@@ -1,15 +1,16 @@
 import csv
 import random
 import numpy as np
-# import tensorflow as tf
+import tensorflow as tf
 
 filePath = '../_data/ml_6_spacing_train.csv'
 
 ALPHABET = {c: i for i, c in enumerate('Pabcdefghijklmnopqrstuvwxyz')}
 PAD = 'P'
 
+
 def word2idx(word, max_len, dtype=np.uint8):
-    word = word + PAD * (max_len-len(word))
+    word = word + PAD * (max_len - len(word))
     return np.array(list(map(lambda c: ALPHABET[c], word)), dtype=dtype)
 
 
@@ -187,7 +188,31 @@ def csv_save(csv_name, predictions):
         f.write('%s,%s,%s,%s\n' % (comp, comps[0], comps[1], comps[2]))
 
 
+def csv_split(csvfile, ratio=0.1):
+    f = open(csvfile, 'r', encoding="utf-8")
+    reader = list(csv.reader(f))
+    f.close()
+
+    train_f = open(csvfile.split('.')[0] + '_split.csv', 'w')
+    val_f = open(csvfile.split('.')[0] + '_val.csv', 'w')
+    head = reader.pop(0)
+    train_f.write('%s\n' % ','.join(head))
+    val_f.write('%s\n' % ','.join(head))
+
+    for line in reader:
+        if random.random() < ratio:
+            val_f.write('%s\n' % ','.join(line))
+        else:
+            train_f.write('%s\n' % ','.join(line))
+
+    train_f.close()
+    val_f.close()
+    return
+
+
 if __name__ == '__main__':
     dataSet = DataSet('../_Data/ml_6_spacing_train.csv', '../_Data/ml_6_spacing_test.csv')
     print(dataSet.random_batch(16))
 
+    # csvfile = '../_Data/2. 띄어쓰기 데이터/ml_6_spacing_train.csv'
+    # csv_split(csvfile)
