@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-from FaceRecog.resnet import *      # noqa
+from FaceRecog.cnn_models import *      # noqa
 from FaceRecog.utils import *       # noqa
 import time                         # noqa
 
@@ -14,7 +14,7 @@ TRAIN_LOG = 'Train_log.txt'
 
 class CNN:
     def __init__(self, name, num_class, input_size,
-                 weight_decay=1e-4):
+                 weight_decay=1e-3):
         self.log_dir = os.path.join(LOG_DIR, name)
         self.param_dir = os.path.join(PARAMS_DIR, name)
         os.makedirs(self.log_dir, exist_ok=True)
@@ -31,14 +31,23 @@ class CNN:
         self.x = tf.placeholder(tf.float32, [None] + self.input_size, name='X')
         self.y = tf.placeholder(tf.int32, [None], name='Y')
 
-        self.x = tf.cond(self.is_train, lambda: images_augment(self.x), lambda: self.x)
+        # self.x = tf.cond(self.is_train, lambda: images_augment(self.x), lambda: self.x)
 
-        if name == 'resnet17':
+        if 'resnet17' in name:
             logit = build_resnet17(self.x, self.is_train, self.num_class)
-        elif name == 'resnet13':
+        elif 'resnet13' in name:
             logit = build_resnet13(self.x, self.is_train, self.num_class)
+        elif 'resnet18' in name:
+            logit = build_resnet18(self.x, self.is_train, self.num_class)
+        elif 'vggnet18' in name:
+            logit = build_vggnet18(self.x, self.is_train, self.num_class)
+        elif 'resnet26' in name:
+            logit = build_resnet26(self.x, self.is_train, self.num_class)
+        elif 'vggnet8' in name:
+            logit = build_vggnet8(self.x, self.is_train, self.num_class)
         else:
-            logit = build_resnet9(self.x, self.is_train, self.num_class)
+            print('Check model name')
+            sys.exit()
 
         y_one_hot = tf.one_hot(self.y, self.num_class)
         cross_entropy = tf.losses.softmax_cross_entropy(y_one_hot, logit)
@@ -108,7 +117,7 @@ class CNN:
             writer.close()
         return
 
-    def train(self, sess, train_data, train_step, lr, batch_size, ckpt=None, summary_step=100):
+    def train(self, sess, train_data, val_data, train_step, lr, batch_size, ckpt=None, summary_step=100):
         self.init_model(sess, ckpt)
         global_step = sess.run(self.global_step)
         base_step = global_step
@@ -119,7 +128,7 @@ class CNN:
             writer = tf.summary.FileWriter(os.path.join(self.log_dir, 'train'),
                                            filename_suffix='-step-%d' % global_step)
             for j in range(summary_step * 10):
-                x, y = train_data.random_batch(batch_size)
+                x, y = train_data.train_batch(batch_size)
                 fetch = [self.train_op, self._cross_entropy_op, self._l2_loss_op, self._loss_op, self._top1_op]
                 feed = {self.x: x, self.y: y, self.lr: lr, self.is_train: True}
                 _, c, l2, l, t1 = sess.run(fetch, feed_dict=feed)
@@ -138,6 +147,8 @@ class CNN:
                                 % (c, l2, l, t1, global_step, base_step+train_step, (time.time() - s) / summary_step),
                                 os.path.join(self.log_dir, TRAIN_LOG), 'a')
                     s = time.time()
+                    if val_data:
+                        self.validation(sess, val_data, batch_size, None)
                     sess.run(self.local_var_init)
 
             print_write('global step: %d, model save, time: %s\n'
@@ -149,14 +160,48 @@ class CNN:
             s = time.time()
         return
 
+    def validation(self, sess, val_data, batch_size, ckpt):
+        if ckpt:
+            self.init_model(sess, ckpt)
+        global_step = sess.run(self.global_step)
+
+        s = time.time()
+        sess.run(self.local_var_init)
+        val_data.sequential_idx_reset()
+        writer = tf.summary.FileWriter(os.path.join(self.log_dir, 'validation'),
+                                       filename_suffix='-step-%d' % global_step)
+        end = False
+        cnt = 0
+        while not end:
+            x, y, end = val_data.val_batch(batch_size)
+            fetch = [self._cross_entropy_op, self._l2_loss_op, self._loss_op, self._top1_op]
+            feed = {self.x: x, self.y: y, self.lr: 0, self.is_train: False}
+            c, l2, l, t1 = sess.run(fetch, feed_dict=feed)
+            cnt += len(x)
+            print('\rValidation - cross_entropy: %0.4f, l2_loss: %0.4f, loss: %0.4f, '
+                  'top1: %0.4f, step: %d, images %d/%d'
+                  % (c, l2, l, t1, global_step, cnt, val_data.numData), end='')
+
+        fetch = [self.merged, self._cross_entropy, self._l2_loss, self._loss, self._top1]
+        merged, c, l2, l, t1 = sess.run(fetch, feed_dict={self.lr: 0, self.is_train: False})
+        writer.add_summary(merged, global_step)
+        print('\r', end='')
+        print_write('Validation - cross_entropy: %0.4f, l2_loss: %0.4f, loss: %0.4f, '
+                    'top1: %0.4f, step: %d, images %d/%d  %0.3f sec\n'
+                    % (c, l2, l, t1, global_step, cnt, val_data.numData, (time.time() - s)),
+                    os.path.join(self.log_dir, TRAIN_LOG), 'a')
+
+        sess.run(self.local_var_init)
+        return
+
     def runs(self, sess, test_data, ckpt, batch_size, csv_name='result.csv'):
         s = time.time()
         self.init_model(sess, ckpt)
         predictions = []
-        num_data = test_data.num_data
+        num_data = test_data.numData
         end = False
         while not end:
-            x, file_names = test_data.sequential_batch(batch_size)
+            x, file_names, end = test_data.infer_batch(batch_size)
             pred_idx = sess.run(self.prediction, feed_dict={self.x: x, self.is_train: False})
 
             if len(file_names) != len(pred_idx):

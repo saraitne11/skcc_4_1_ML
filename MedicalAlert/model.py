@@ -4,7 +4,7 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 import tensorflow.contrib as tf_contrib     # noqa
 from tensorflow.contrib import rnn          # noqa
-from CompSplit.utils import *               # noqa
+from MedicalAlert.utils import *            # noqa
 import time                                 # noqa
 
 
@@ -188,7 +188,7 @@ class BiLstmCrf:
             writer.close()
         return
 
-    def train(self, sess, data, train_step, lr, batch_size, keep_prob, ckpt=None, summary_step=100):
+    def train(self, sess, train_data, train_step, lr, batch_size, keep_prob, ckpt=None, summary_step=100):
         self.init_model(sess, ckpt)
         global_step = sess.run(self.global_step)
         base_step = global_step
@@ -199,7 +199,7 @@ class BiLstmCrf:
             writer = tf.summary.FileWriter(os.path.join(self.log_dir, 'train'),
                                            filename_suffix='-step-%d' % global_step)
             for j in range(summary_step * 10):
-                x, y, seq_len = data.train_batch(batch_size)
+                x, y, seq_len = train_data.random_batch(batch_size)
                 fetch = [self.train_op, self._loss_op, self._acc_op]
                 feed = {self.x: x, self.y: y, self.seq_len: seq_len, self.lr: lr, self.keep_prob: keep_prob}
                 _, loss, acc = sess.run(fetch, feed_dict=feed)
@@ -216,8 +216,6 @@ class BiLstmCrf:
                                 % (loss, acc, global_step, base_step+train_step, (time.time() - s) / summary_step),
                                 os.path.join(self.log_dir, TRAIN_LOG), 'a')
                     s = time.time()
-                    if data.val_path:
-                        self.validation(sess, data, batch_size, None)
                     sess.run(self.local_var_init)
 
             print_write('global step: %d, model save %s, time: %s\n'
@@ -231,46 +229,14 @@ class BiLstmCrf:
             s = time.time()
         return
 
-    def validation(self, sess, val_data, batch_size, ckpt):
-        if ckpt:
-            self.init_model(sess, ckpt)
-        global_step = sess.run(self.global_step)
-
-        s = time.time()
-        sess.run(self.local_var_init)
-        val_data.sequential_idx_reset()
-        writer = tf.summary.FileWriter(os.path.join(self.log_dir, 'validation'),
-                                       filename_suffix='-step-%d' % global_step)
-        end = False
-        cnt = 0
-        while not end:
-            x, y, seq_len, end = val_data.val_batch(batch_size)
-            fetch = [self._loss_op, self._acc_op]
-            feed = {self.x: x, self.y: y, self.seq_len: seq_len, self.keep_prob: 1.0}
-            loss, acc = sess.run(fetch, feed_dict=feed)
-            cnt += len(x)
-            print('\rValidation - Loss: %0.3f, Accuracy: %0.3f, step: %d, lines %d/%d'
-                  % (loss, acc, global_step, cnt, val_data.val_num_data), end='')
-
-        fetch = [self.test_merged, self._loss, self._acc]
-        merged, loss, acc = sess.run(fetch)
-        writer.add_summary(merged, global_step)
-        print('\r', end='')
-        print_write('Validation - Loss: %0.3f, Accuracy: %0.3f, step: %d, lines %d/%d  %0.3f sec\n'
-                    % (loss, acc, global_step, cnt, val_data.numData, (time.time() - s)),
-                    os.path.join(self.log_dir, TRAIN_LOG), 'a')
-
-        sess.run(self.local_var_init)
-        return
-
-    def runs(self, sess, data, ckpt, batch_size, csv_name='result.csv'):
+    def runs(self, sess, test_data, ckpt, batch_size, csv_name='result.csv'):
         s = time.time()
         self.init_model(sess, ckpt)
         predictions = []
-        num_data = data.test_num_data
+        num_data = test_data.test_num_data
         end = False
         while not end:
-            x, seq_len, end = data.infer_batch(batch_size)
+            x, seq_len, end = test_data.sequential_batch(batch_size)
             pred_idx = sess.run(self.prediction,
                                 feed_dict={self.x: x, self.seq_len: seq_len, self.keep_prob: 1.0})
 
