@@ -26,13 +26,28 @@ class DataSet:
                 self.imageLable[i] = np.array(line[1])
             self.fileName.append(line[0])
 
-    def random_batch(self, batch_size):
+    def sequential_idx_reset(self):
+        self.currentIdx = 0
+        return
+
+    def train_batch(self, batch_size):
         idx = random.sample(list(range(0, self.numData)), batch_size)
         x = self.imageData[idx, :]
         y = self.imageLable[idx]
         return x, y
 
-    def sequential_batch(self, batch_size):
+    def val_batch(self, batch_size):
+        if self.currentIdx + batch_size <= self.numData:
+            x = self.imageData[self.currentIdx:self.currentIdx + batch_size]
+            y = self.imageLable[self.currentIdx:self.currentIdx + batch_size]
+            self.currentIdx += batch_size
+            return x, y, False
+        else:
+            x = self.imageData[self.currentIdx:]
+            y = self.imageLable[self.currentIdx:]
+            return x, y, True
+
+    def infer_batch(self, batch_size):
         if self.currentIdx + batch_size <= self.numData:
             x = self.imageData[self.currentIdx:self.currentIdx + batch_size]
             n = self.fileName[self.currentIdx:self.currentIdx + batch_size]
@@ -42,6 +57,28 @@ class DataSet:
             x = self.imageData[self.currentIdx:]
             n = self.fileName[self.currentIdx:]
             return x, n, True
+
+
+def csv_split(csvfile, ratio=0.1):
+    f = open(csvfile, 'r', encoding="utf-8")
+    reader = list(csv.reader(f))
+    f.close()
+
+    train_f = open(csvfile.split('.')[0] + '_split.csv', 'w')
+    val_f = open(csvfile.split('.')[0] + '_val.csv', 'w')
+    head = reader.pop(0)
+    train_f.write('%s\n' % ','.join(head))
+    val_f.write('%s\n' % ','.join(head))
+
+    for line in reader:
+        if random.random() < ratio:
+            val_f.write('%s\n' % ','.join(line))
+        else:
+            train_f.write('%s\n' % ','.join(line))
+
+    train_f.close()
+    val_f.close()
+    return
 
 
 def print_write(s, file, mode=None):
