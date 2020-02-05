@@ -241,13 +241,19 @@ class BiLstmCrf:
         val_data.sequential_idx_reset()
         writer = tf.summary.FileWriter(os.path.join(self.log_dir, 'validation'),
                                        filename_suffix='-step-%d' % global_step)
+        pred_compounds = []
         end = False
         cnt = 0
         while not end:
             x, y, seq_len, end = val_data.val_batch(batch_size)
-            fetch = [self._loss_op, self._acc_op]
+            fetch = [self.prediction, self._loss_op, self._acc_op]
             feed = {self.x: x, self.y: y, self.seq_len: seq_len, self.keep_prob: 1.0}
-            loss, acc = sess.run(fetch, feed_dict=feed)
+            p, loss, acc = sess.run(fetch, feed_dict=feed)
+
+            for _x, _p in zip(x, p):
+                # print(_x, _p)
+                pred_compounds.append(expectation_to_compound(_x, _p))
+
             cnt += len(x)
             print('\rValidation - Loss: %0.3f, Accuracy: %0.3f, step: %d, lines %d/%d'
                   % (loss, acc, global_step, cnt, val_data.val_num_data), end='')
@@ -256,9 +262,13 @@ class BiLstmCrf:
         merged, loss, acc = sess.run(fetch)
         writer.add_summary(merged, global_step)
         print('\r', end='')
-        print_write('Validation - Loss: %0.3f, Accuracy: %0.3f, step: %d, lines %d/%d  %0.3f sec\n'
-                    % (loss, acc, global_step, cnt, val_data.numData, (time.time() - s)),
+
+        print_write('Validation - Loss: %0.3f, CompAcc: %0.3f, Accuracy: %0.3f, step: %d, lines %d/%d  %0.3f sec\n'
+                    % (loss, compounds_accuracy(val_data.val_compound, pred_compounds),
+                       acc, global_step, cnt, val_data.val_num_data, (time.time() - s)),
                     os.path.join(self.log_dir, TRAIN_LOG), 'a')
+        # print(val_data.val_compound)
+        # print(pred_compounds)
 
         sess.run(self.local_var_init)
         return
@@ -280,8 +290,8 @@ class BiLstmCrf:
 
             print('\rTest - %d/%d' % (len(predictions), num_data), end='')
 
-            for x, p in zip(x, pred_idx):
-                predictions.append([x, p])
+            for _x, p in zip(x, pred_idx):
+                predictions.append([_x, p])
 
         csv_save(csv_name, predictions)
         print()

@@ -187,9 +187,11 @@ def expectation_to_compound(word, location):
     compounds = ['', '', '']
 
     location = np.array(location)
-    indices = np.where(location == 1)[0]
+    indices = np.where(location == 1)[0][:3]
+
     idx = 0
     iidx = 0
+
     for index in indices[1:]:
         compounds[iidx] = (compound[idx:index])
         idx = index
@@ -197,6 +199,20 @@ def expectation_to_compound(word, location):
     compounds[iidx] = (compound[idx:length])
 
     return compound, compounds
+
+
+def compounds_accuracy(truth, pred):
+    if len(truth) != len(pred):
+        print('truth length %d and pred length %d not match' % (len(truth), len(pred)))
+    else:
+        cnt = 0
+        for t, p in zip(truth, pred):
+            t = t[1]
+            p = list(p[1])
+
+            if t == p[:len(t)]:
+                cnt += 1
+        return cnt/len(truth)
 
 
 def csv_save(csv_name, predictions):

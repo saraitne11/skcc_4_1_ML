@@ -45,16 +45,16 @@ def residual_block(x,
         with tf.variable_scope('conv1'):
             h1 = tf.layers.conv2d(x, output_channel, [3, 3], strides=stride, padding='SAME', use_bias=False,
                                   kernel_initializer=tf.initializers.variance_scaling())
-            # h1 = tf.layers.batch_normalization(h1, momentum=batch_norm_decay, epsilon=batch_norm_epsilon,
-            #                                    training=is_train, fused=True)
+            h1 = tf.layers.batch_normalization(h1, momentum=batch_norm_decay, epsilon=batch_norm_epsilon,
+                                               training=is_train, fused=True)
             h1 = tf.layers.dropout(h1, rate=DROP_RATE, training=is_train)
             h1 = tf.nn.relu(h1)
 
         with tf.variable_scope('conv2'):
             h2 = tf.layers.conv2d(h1, output_channel, [3, 3], strides=1, padding='SAME', use_bias=False,
                                   kernel_initializer=tf.initializers.variance_scaling())
-            # h2 = tf.layers.batch_normalization(h2, momentum=batch_norm_decay, epsilon=batch_norm_epsilon,
-            #                                    training=is_train, fused=True)
+            h2 = tf.layers.batch_normalization(h2, momentum=batch_norm_decay, epsilon=batch_norm_epsilon,
+                                               training=is_train, fused=True)
             h2 = tf.layers.dropout(h2, rate=DROP_RATE, training=is_train)
     return tf.nn.relu(h2 + x)
 
@@ -71,16 +71,16 @@ def residual_block_down_sample(x,
         with tf.variable_scope('conv1'):
             h1 = tf.layers.conv2d(x, output_channel, [3, 3], strides=stride, padding='SAME', use_bias=False,
                                   kernel_initializer=tf.initializers.variance_scaling())
-            # h1 = tf.layers.batch_normalization(h1, momentum=batch_norm_decay, epsilon=batch_norm_epsilon,
-            #                                    training=is_train, fused=True)
+            h1 = tf.layers.batch_normalization(h1, momentum=batch_norm_decay, epsilon=batch_norm_epsilon,
+                                               training=is_train, fused=True)
             h1 = tf.layers.dropout(h1, rate=DROP_RATE, training=is_train)
             h1 = tf.nn.relu(h1)
 
         with tf.variable_scope('conv2'):
             h2 = tf.layers.conv2d(h1, output_channel, [3, 3], strides=1, padding='SAME', use_bias=False,
                                   kernel_initializer=tf.initializers.variance_scaling())
-            # h2 = tf.layers.batch_normalization(h2, momentum=batch_norm_decay, epsilon=batch_norm_epsilon,
-            #                                    training=is_train, fused=True)
+            h2 = tf.layers.batch_normalization(h2, momentum=batch_norm_decay, epsilon=batch_norm_epsilon,
+                                               training=is_train, fused=True)
             h2 = tf.layers.dropout(h2, rate=DROP_RATE, training=is_train)
 
         # option A - zero padding for extra dimension => no need extra params
