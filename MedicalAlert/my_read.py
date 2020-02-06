@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 
 
 PATIENTID = 0
@@ -36,6 +37,11 @@ def line_preproc(line):
 
     if not line[PATIENTID] or line[PATIENTID] == 'patientid':
         return None
+
+    if not line[TIMESTAMP]:
+        print('line TimeStamp Error %d' % len(line))
+    else:
+        line[TIMESTAMP] = datetime.strptime(line[TIMESTAMP], '%Y-%m-%d %H:%M:%S')
 
     if line[GENDER] == 'M':
         line[GENDER] = 0.0
@@ -87,13 +93,26 @@ class TrainData:
             if preproc:
                 self.lines.append(preproc)
 
-        self.lines.sort(key=lambda x: (x[PATIENTID], x[TIMESTAMP]))
+        self.num_lines = len(self.lines)
 
-        self.num_data = len(self.lines)
+        self.patients = list(set(map(lambda x: x[PATIENTID], self.lines)))
+        self.num_patients = len(self.patients)
 
-        from pprint import pprint
-        pprint(self.lines[:300], width=300)
-        print(self.num_data)
+        self.group_by_patient = {p: [] for p in self.patients}
+        for line in self.lines:
+            self.group_by_patient[line[PATIENTID]].append(line)
+
+        self.max_seq_len = 0
+        for patient in self.patients:
+            self.group_by_patient[patient].sort(key=lambda x: x[TIMESTAMP])
+            if len(self.group_by_patient[patient]) > self.max_seq_len:
+                self.max_seq_len = len(self.group_by_patient[patient])
+        print(self.max_seq_len)
+
+        # from pprint import pprint
+        # pprint(self.lines[:300], width=300)
+        # print(self.num_lines)
+        # pprint(self.group_by_patient, width=300)
         return
 
 
