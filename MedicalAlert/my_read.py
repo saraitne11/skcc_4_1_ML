@@ -22,12 +22,32 @@ GL = 15
 ALERT = 16
 
 
-VECTOR_LEN = 14
+VECTOR_LEN = 17
+PARAM_VEC_LEN = 14
+
+UPPER_BOUND = 80
+LOWER_BOUND = 20
+
+def get_threshold(x):
+    a = np.array(x)
+    upper_quartile = np.nanpercentile(a, UPPER_BOUND, axis=1)
+    lower_quartile = np.nanpercentile(a, LOWER_BOUND, axis=1)
+
+    return np.concatenate((upper_quartile[:, np.newaxis], lower_quartile[:, np.newaxis]), axis=1)
+
+
+def print_2d_array(arr):
+    row, col = np.shape(arr)
+    for i in range(row):
+        for j in range(col):
+            print('%0.3f' % arr[i, j], end=' ')
+        print()
+    return
 
 
 def none_or_float(x):
     if not x:           # x == ''
-        return None
+        return float('nan')
     else:
         return float(x)
 
@@ -109,14 +129,29 @@ class TrainData:
             self.group_by_patient[patient].sort(key=lambda x: x[TIMESTAMP])
             if len(self.group_by_patient[patient]) > self.max_seq_len:
                 self.max_seq_len = len(self.group_by_patient[patient])
-        print(self.max_seq_len)
+        # print(self.max_seq_len)
+
 
         from pprint import pprint
         # pprint(self.lines[:300], width=300)
-        print(self.num_lines)
-        pprint(self.group_by_patient, width=300)
-        pprint(self.group_by_patient['318614146924878026'], width=300)
+        # print(self.num_lines)
+        # pprint(self.group_by_patient, width=300)
+        # pprint(self.group_by_patient['318614146924878026'], width=300)
+
+        self.data_init()
+        # pprint(self.group_by_patient, width=300)
         return
+
+    def get_patient_means(self):
+        means = {}
+        for patient in self.patients:
+            temp_data = self.group_by_patient[patient]
+            temp_data = np.array(list(map(lambda x: x[GENDER:ALERT], temp_data)))
+            temp_mean = np.nanmean(temp_data, axis=0)
+            temp_mean[np.isnan(temp_mean)] = 0.0
+            means[patient] = temp_mean
+        return means
+
 
     def normalization(self):
         # None and outlier 처리
@@ -125,7 +160,58 @@ class TrainData:
         return
 
     def data_init(self):
-        self.data = np.zeros([self.num_patients, self.max_seq_len, VECTOR_LEN])
+        self.data = np.zeros([self.num_patients, self.max_seq_len, PARAM_VEC_LEN])
+
+        outlier_mask = [[], [], [], [], [], [], []]
+        for values in self.group_by_patient.values():
+            for index in range(W, ALERT):
+                outlier_mask[index - W] = outlier_mask[index - W] + list(list(zip(*values))[index])
+
+        # outlier의 경계값 찾기
+        self.threshold = get_threshold(outlier_mask)
+
+        # outlier NaN으로 바꾸기
+        for patient in self.patients:
+            for idx in range(len(self.group_by_patient[patient])):
+                temp = self.group_by_patient[patient][idx][W:ALERT]
+                for index in range(len(temp)):
+                    if temp[index] == np.nan or temp[index] < self.threshold[index][1] or temp[index] > self.threshold[index][0]:
+                        temp[index] = np.nan
+                self.group_by_patient[patient][idx][W:ALERT] = temp
+
+        self.means_by_patient = self.get_patient_means()
+
+        # for item in self.means_by_patient.values():
+            # print(np.shape(item))
+
+        # NaN mean 데이터로 바꾸기
+        for patient in self.patients:
+            for idx in range(len(self.group_by_patient[patient])):
+                for j in range(GENDER, ALERT):
+                    if np.isnan(self.group_by_patient[patient][idx][j]):
+                        self.group_by_patient[patient][idx][j] = self.means_by_patient[patient][j - GENDER]
+
+        # patient id 별로 self.data 채워 넣기
+
+        # outlier_removed_data = []
+        # for values in outlier_mask:
+        #     outlier_removed_data.append(removeOutliers(values))
+        # outlier_removed_data = np.array(outlier_removed_data)
+
+        # odata_index = 0
+        # index = 0
+        # for values in self.group_by_patient.values():
+        #     inner_index = 0
+        #     for i in range(len(values)):
+        #         self.group_by_patient
+        #     for value in values:
+        #         self.data[index, inner_index] = np.array(value[2:16])
+        #         self.data[index, inner_index, 7:14] = np.array(outlier_removed_data[:, odata_index])
+        #         inner_index += 1
+        #         odata_index += 1
+        #     index += 1
+
+
         # numpy array로 만들기
         # [num_patient(185), max_seq_len(402), 14]
         # self.data = np.zeros([num_patient(185), max_seq_len(402), 14])
