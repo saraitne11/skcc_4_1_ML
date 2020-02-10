@@ -115,6 +115,29 @@ class TrainData:
         # pprint(self.group_by_patient, width=300)
         return
 
+    def normalization(self):
+        # None and outlier 처리
+        # 앞뒤의 평균값
+        # 0~1 사이의 값으로 변환
+        return
+
+    def data_init(self):
+        # numpy array로 만들기
+        # [num_patient(185), max_seq_len(402), 14]
+        # self.data = np.zeros([num_patient(185), max_seq_len(402), 14])
+        return
+
+    def train_batch(self):
+        return
+
+    def test_batch(self):
+        return
+
+
+class TestData:
+    def __init__(self):
+        return
+
 
 if __name__ == '__main__':
     data = TrainData('../_Data/ml_10_medicalalert_train.csv')
