@@ -1,5 +1,6 @@
 import sys
 from datetime import datetime
+import numpy as np
 
 
 PATIENTID = 0
@@ -20,7 +21,8 @@ HR = 14
 GL = 15
 ALERT = 16
 
-VECTOR_LEN = 17
+
+VECTOR_LEN = 14
 
 
 def none_or_float(x):
@@ -109,34 +111,38 @@ class TrainData:
                 self.max_seq_len = len(self.group_by_patient[patient])
         print(self.max_seq_len)
 
-        # from pprint import pprint
+        from pprint import pprint
         # pprint(self.lines[:300], width=300)
-        # print(self.num_lines)
-        # pprint(self.group_by_patient, width=300)
+        print(self.num_lines)
+        pprint(self.group_by_patient, width=300)
+        pprint(self.group_by_patient['318614146924878026'], width=300)
         return
 
     def normalization(self):
         # None and outlier 처리
-        # 앞뒤의 평균값
+        # 환자의 평균값
         # 0~1 사이의 값으로 변환
         return
 
     def data_init(self):
+        self.data = np.zeros([self.num_patients, self.max_seq_len, VECTOR_LEN])
         # numpy array로 만들기
         # [num_patient(185), max_seq_len(402), 14]
         # self.data = np.zeros([num_patient(185), max_seq_len(402), 14])
+        self.normalization()
         return
 
     def train_batch(self):
-        return
-
-    def test_batch(self):
         return
 
 
 class TestData:
     def __init__(self):
         return
+
+    def test_batch(self, train_data: TrainData):
+        return
+
 
 
 if __name__ == '__main__':
