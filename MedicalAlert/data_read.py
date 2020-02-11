@@ -24,6 +24,8 @@ HR = 14
 GL = 15
 ALERT = 16
 
+YES = 2.0
+NO = 1.0
 
 LINE_LEN = 17
 NUM_FEATURES = 14
@@ -97,9 +99,9 @@ def line_preproc(line, is_train=True):
 
     if is_train:
         if line[ALERT] == 'Yes':
-            line[ALERT] = 1.0
+            line[ALERT] = YES
         elif line[ALERT] == 'No':
-            line[ALERT] = 0.0
+            line[ALERT] = NO
         else:
             print('Alert Error', line)
             sys.exit(-1)
@@ -107,7 +109,11 @@ def line_preproc(line, is_train=True):
 
 
 class TrainData:
-    def __init__(self, train_csv, upper_percet=80, lower_percent=25):
+    def __init__(self, train_csv,
+                 yes_weight=5.0, no_weight=1.0,
+                 upper_percet=99, lower_percent=1):
+        self.yes_weight = yes_weight
+        self.no_weight = no_weight
         self.upper_percent = upper_percet
         self.lower_percent = lower_percent
         f = open(train_csv, 'r', encoding='utf-8')
@@ -174,7 +180,7 @@ class TrainData:
 
         self.check_nan()
 
-        self.x, self.y, self.seq_len = self.data_init()
+        self.x, self.y, self.weight, self.seq_len = self.data_init()
         # print_2d_array(self.x[121])
         # print_1d_array(self.y[121])
         # print(np.shape(self.x))
@@ -189,14 +195,23 @@ class TrainData:
         target_features = [GENDER, AGE, DI, COPD, CHF, HT, AFIB, W, PW, BPS, BPD, SPO2, HR, GL]
         x = np.zeros([self.num_patients, self.max_seq_len, len(target_features)], dtype=np.float32)
         y = np.zeros([self.num_patients, self.max_seq_len], dtype=np.int32)
+        weights = np.zeros([self.num_patients, self.max_seq_len], dtype=np.float32)
         seq_len = np.zeros([self.num_patients], dtype=np.float32)
         for patient_idx, patient in enumerate(self.patients):
             num_data_per_patient = len(self.group_by_patient[patient])
             seq_len[patient_idx] = num_data_per_patient
             for time_step in range(num_data_per_patient):
                 x[patient_idx, time_step, :] = self.group_by_patient[patient][time_step][GENDER:ALERT]
-                y[patient_idx, time_step] = self.group_by_patient[patient][time_step][ALERT]
-        return x, y, seq_len
+
+                alert = self.group_by_patient[patient][time_step][ALERT]
+                y[patient_idx, time_step] = alert
+
+                if alert >= YES:
+                    weights[patient_idx, time_step] = self.yes_weight
+                else:
+                    weights[patient_idx, time_step] = self.no_weight
+
+        return x, y, weights, seq_len
 
     def min_max_normalization(self, _max, _min):
         target_features = [AGE, W, PW, BPS, BPD, SPO2, HR, GL]
@@ -297,8 +312,9 @@ class TrainData:
         choose = random.sample(list(range(0, self.num_patients)), batch_size)
         x = self.x[choose]
         y = self.y[choose]
+        weight = self.weight[choose]
         seq_len = self.seq_len[choose]
-        return x, y, seq_len
+        return x, y, weight, seq_len
 
 
 class TestData:
@@ -306,6 +322,8 @@ class TestData:
         f = open(test_csv, 'r', encoding='utf-8')
         lines = list(map(lambda x: x.rstrip().split(','), f.readlines()))
         f.close()
+
+        self.train_data = train_data
 
         self.head = lines[0]
         self.lines = []
@@ -385,7 +403,7 @@ class TestData:
                     temp[j] = np.nan
             self.lines[i][W:ALERT] = temp
 
-    def test_batch(self, train_data: TrainData):
+    def test_batch(self):
         cur_data = self.lines[self.sequential_index]
         self.sequential_index += 1
 
@@ -396,19 +414,19 @@ class TestData:
         patient_id = cur_data[PATIENTID]
         cur_time = cur_data[TIMESTAMP]
 
-        time_stamps = [i[1] for i in train_data.group_by_patient[patient_id]]
+        time_stamps = [i[1] for i in self.train_data.group_by_patient[patient_id]]
         crop_index = bisect.bisect_left(time_stamps, cur_time)
 
         if crop_index == 0:
-            return (np.array(cur_data[GENDER:ALERT]))[np.newaxis, :], flag
+            return (np.array(cur_data[GENDER:ALERT]))[np.newaxis, :], 1, flag
 
-        index = train_data.patients.index(patient_id)
+        index = self.train_data.patients.index(patient_id)
 
-        x = train_data.x[index, :crop_index]
+        x = self.train_data.x[index, :crop_index]
         temp = np.array(cur_data[GENDER:ALERT])
         temp = temp[np.newaxis, :]
         x = np.concatenate([x, temp])
-        return x, flag
+        return x, np.shape(x)[0], flag
 
 
 if __name__ == '__main__':

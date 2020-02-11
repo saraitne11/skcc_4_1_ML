@@ -8,12 +8,12 @@ from MedicalAlert.model import *       # noqa
 
 
 dataset = TrainData('../_Data/ml_10_medicalalert_train.csv')
+test_dataset = TestData('../_Data/ml_10_medicalalert_test.csv', dataset)
 
 args = Arguments('LSTM', [300, 300], True, True)
 model = UniLSTM('model1', args)
 
 sess = tf.Session(config=get_tf_config())
-model.train(sess, dataset, 1000, 1e-4, 8, 0.7)
-model.train(sess, dataset, 2000, 1e-5, 8, 0.7, ckpt='step-1000')
+model.runs(sess, test_dataset, ckpt='step-1000')
 
 sess.close()

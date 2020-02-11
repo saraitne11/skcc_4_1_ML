@@ -60,11 +60,12 @@ class UniLSTM:
         self.hyper_params = args
 
         self.input_dim = NUM_FEATURES
-        self.output_dim = 2
+        self.output_dim = 3
 
         # [batch size, sequence length]
         self.x = tf.placeholder(tf.float32, [None, None, NUM_FEATURES], name='x')
         self.y = tf.placeholder(tf.int32, [None, None], name='y')
+        self.weights = tf.placeholder(tf.float32, [None, None], name='weights')
         self.seq_len = tf.placeholder(tf.float32, [None], name='seq_len')
         self.max_seq_len = tf.placeholder(tf.int32, [], name='max_seq_len')
 
@@ -79,11 +80,8 @@ class UniLSTM:
         self.logit = self.uni_lstm(self.x)
         self.prediction = tf.argmax(self.logit, axis=2, output_type=tf.int32)
 
-        # weights = tf.sequence_mask(self.seq_len, maxlen=self.max_seq_len, dtype=tf.float32)
-        weights = tf.cast(self.y, dtype=tf.float32) * 2.0 + 0.1
-        sequence_loss = tf_contrib.seq2seq.sequence_loss(logits=self.logit, targets=self.y, weights=weights,
-                                                         average_across_timesteps=False)
-        self.loss = tf.reduce_sum(sequence_loss)
+        sequence_loss = tf_contrib.seq2seq.sequence_loss(logits=self.logit, targets=self.y, weights=self.weights)
+        self.loss = tf.reduce_mean(sequence_loss)
 
         # optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
         # gvs = optimizer.compute_gradients(self.loss)
@@ -91,7 +89,12 @@ class UniLSTM:
         # self.train_op = optimizer.apply_gradients(clip_gvs, global_step=self.global_step)
         self.train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.loss, self.global_step)
 
-        self.acc = tf.reduce_mean(tf.cast(tf.equal(self.prediction, self.y), tf.float32))
+        eq = tf.cast(tf.equal(self.prediction, self.y), tf.float32)
+        eq_sum = tf.reduce_sum(eq, axis=1)
+        eq_div = tf.div(eq_sum, self.seq_len)
+        self.acc = tf.reduce_mean(eq_div)
+
+        # self.acc = tf.reduce_mean(tf.cast(tf.equal(self.prediction, self.y), tf.float32))
         self._loss, self._loss_op = tf.metrics.mean(self.loss, name='Loss_mean')
         self._acc, self._acc_op = tf.metrics.mean(self.acc, name='Accuracy_mean')
 
@@ -176,10 +179,10 @@ class UniLSTM:
             writer = tf.summary.FileWriter(os.path.join(self.log_dir, 'train'),
                                            filename_suffix='-step-%d' % global_step)
             for j in range(summary_step * 10):
-                x, y, seq_len = train_data.train_batch(batch_size)
+                x, y, weight, seq_len = train_data.train_batch(batch_size)
                 fetch = [self.train_op, self._loss_op, self._acc_op]
                 feed = {self.x: x, self.y: y, self.seq_len: seq_len,
-                        self.max_seq_len: train_data.max_seq_len, self.lr: lr, self.keep_prob: keep_prob}
+                        self.weights: weight, self.lr: lr, self.keep_prob: keep_prob}
                 _, loss, acc = sess.run(fetch, feed_dict=feed)
                 global_step = sess.run(self.global_step)
                 print('\rTraining - Loss: %0.3f, Accuracy: %0.3f, step: %d/%d'
@@ -207,27 +210,18 @@ class UniLSTM:
             s = time.time()
         return
 
-    # def runs(self, sess, test_data, ckpt, batch_size, csv_name='result.csv'):
-    #     s = time.time()
-    #     self.init_model(sess, ckpt)
-    #     predictions = []
-    #     num_data = test_data.test_num_data
-    #     end = False
-    #     while not end:
-    #         x, seq_len, end = test_data.sequential_batch(batch_size)
-    #         pred_idx = sess.run(self.prediction,
-    #                             feed_dict={self.x: x, self.seq_len: seq_len, self.keep_prob: 1.0})
-    #
-    #         if len(x) != len(pred_idx):
-    #             print('len(file_names) %d != len(pred_idx) %d' % (len(x), len(pred_idx)))
-    #             return -1
-    #
-    #         print('\rTest - %d/%d' % (len(predictions), num_data), end='')
-    #
-    #         for x, p in zip(x, pred_idx):
-    #             predictions.append([x, p])
-    #
-    #     csv_save(csv_name, predictions)
-    #     print()
-    #     print('total time: %0.3f sec, %0.3f sec/word' % (time.time()-s, (time.time()-s)/num_data))
-    #     return
+    def runs(self, sess, test_data, ckpt, csv_name='result.csv'):
+        s = time.time()
+        self.init_model(sess, ckpt)
+        predictions = []
+        num_data = test_data.num_lines
+        end = False
+        while not end:
+            x, seq_len, end = test_data.test_batch()
+            pred = sess.run(self.prediction,
+                            feed_dict={self.x: [x], self.seq_len: [seq_len], self.keep_prob: 1.0})
+            print(pred[0][-1])
+            # print('\rTest - %d/%d' % (len(predictions), num_data), end='')
+
+        print('total time: %0.3f sec, %0.3f sec/data' % (time.time()-s, (time.time()-s)/num_data))
+        return
