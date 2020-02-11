@@ -389,6 +389,10 @@ class TestData:
         cur_data = self.lines[self.sequential_index]
         self.sequential_index += 1
 
+        flag = False
+        if self.sequential_index == self.num_lines:
+            flag = True
+
         patient_id = cur_data[PATIENTID]
         cur_time = cur_data[TIMESTAMP]
 
@@ -396,7 +400,7 @@ class TestData:
         crop_index = bisect.bisect_left(time_stamps, cur_time)
 
         if crop_index == 0:
-            return (np.array(cur_data[GENDER:ALERT]))[np.newaxis, :]
+            return (np.array(cur_data[GENDER:ALERT]))[np.newaxis, :], flag
 
         index = train_data.patients.index(patient_id)
 
@@ -404,7 +408,7 @@ class TestData:
         temp = np.array(cur_data[GENDER:ALERT])
         temp = temp[np.newaxis, :]
         x = np.concatenate([x, temp])
-        return x
+        return x, flag
 
 
 if __name__ == '__main__':
