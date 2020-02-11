@@ -110,7 +110,7 @@ def line_preproc(line, is_train=True):
 
 class TrainData:
     def __init__(self, train_csv,
-                 yes_weight=75.0, no_weight=1.0,
+                 yes_weight=200.0, no_weight=1.0,
                  upper_percet=90, lower_percent=20):
         self.yes_weight = yes_weight
         self.no_weight = no_weight
@@ -168,20 +168,21 @@ class TrainData:
         # 각 환자별, 그리고 피쳐별[W~GL]로 평균
         # 185[환자 수] by 7[피쳐 수]
         # =================================================
-        self.patient_means = self.get_patient_means()
+        # self.patient_means = self.get_patient_means()
         # =================================================
         # for patient in self.patients:
         #     print_1d_array(self.patient_means[patient])
         # print(len(self.patient_means))
 
-        self.nan2mean(self.patient_means)
+        # self.nan2mean(self.patient_means)
+        self.nan2minus1()
         # pprint(self.group_by_patient, width=300)
 
-        self.max_by_features, self.min_by_features = self.get_min_max_by_features()
+        # self.max_by_features, self.min_by_features = self.get_min_max_by_features()
         # print_1d_array(self.max_by_features)
         # print_1d_array(self.min_by_features)
 
-        self.min_max_normalization(self.max_by_features, self.min_by_features)
+        # self.min_max_normalization(self.max_by_features, self.min_by_features)
         # pprint(self.group_by_patient, width=300)
 
         self.check_nan()
@@ -279,6 +280,18 @@ class TrainData:
                 self.group_by_patient[patient][i] = temp
         return
 
+    def nan2minus1(self):
+        for patient in self.patients:
+            num_data_per_patient = len(self.group_by_patient[patient])
+            for i in range(num_data_per_patient):
+                temp = self.group_by_patient[patient][i]
+                # nan 이면 -1.0 으로 변환
+                for j in range(DI, ALERT):
+                    if np.isnan(temp[j]):
+                        temp[j] = -1.0
+                self.group_by_patient[patient][i] = temp
+        return
+
     def get_patient_means(self):
         means = {}
         for patient in self.patients:
@@ -350,13 +363,14 @@ class TestData:
 
         # self.outlier2nan(self.upper, self.lower)
 
-        self.patient_means = train_data.patient_means
+        # self.patient_means = train_data.patient_means
 
-        self.nan2mean(self.patient_means)
+        # self.nan2mean(self.patient_means)
+        self.nan2minus1()
 
-        self.max_by_features, self.min_by_features = train_data.max_by_features, train_data.min_by_features
+        # self.max_by_features, self.min_by_features = train_data.max_by_features, train_data.min_by_features
 
-        self.min_max_normalization(self.max_by_features, self.min_by_features)
+        # self.min_max_normalization(self.max_by_features, self.min_by_features)
 
         self.check_nan()
         return
@@ -397,6 +411,18 @@ class TestData:
             for j in range(W, ALERT):
                 if np.isnan(temp[j]):
                     temp[j] = patient_means[patient][j - W]
+
+            self.lines[i] = temp
+        return
+
+    def nan2minus1(self):
+        for i in range(self.num_lines):
+            temp = self.lines[i]
+
+            # nan 이면 -1.0 으로 변환
+            for j in range(DI, ALERT):
+                if np.isnan(temp[j]):
+                    temp[j] = -1.0
 
             self.lines[i] = temp
         return
