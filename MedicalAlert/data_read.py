@@ -2,6 +2,7 @@ import sys
 from datetime import datetime
 import numpy as np
 import random
+import bisect
 from pprint import pprint
 
 
@@ -57,7 +58,7 @@ def none_or_float(x):
         return float(x)
 
 
-def line_preproc(line):
+def line_preproc(line, is_train=True):
     if len(line) != LINE_LEN:
         print('len(line) %d is not 17' % len(line))
         sys.exit(-1)
@@ -94,13 +95,14 @@ def line_preproc(line):
     line[HR] = none_or_float(line[HR])          # 맥박을 나타낸다
     line[GL] = none_or_float(line[GL])          # 혈당을 나타낸다
 
-    if line[ALERT] == 'Yes':
-        line[ALERT] = 1.0
-    elif line[ALERT] == 'No':
-        line[ALERT] = 0.0
-    else:
-        print('Alert Error', line)
-        sys.exit(-1)
+    if is_train:
+        if line[ALERT] == 'Yes':
+            line[ALERT] = 1.0
+        elif line[ALERT] == 'No':
+            line[ALERT] = 0.0
+        else:
+            print('Alert Error', line)
+            sys.exit(-1)
     return line
 
 
@@ -300,12 +302,111 @@ class TrainData:
 
 
 class TestData:
-    def __init__(self):
+    def __init__(self, test_csv, train_data: TrainData):
+        f = open(test_csv, 'r', encoding='utf-8')
+        lines = list(map(lambda x: x.rstrip().split(','), f.readlines()))
+        f.close()
+
+        self.head = lines[0]
+        self.lines = []
+        for line in lines[1:]:
+            line.append(line.pop(0))
+            preproc = line_preproc(line, False)
+            if preproc:
+                self.lines.append(preproc)
+
+        self.num_lines = len(self.lines)
+
+        self.patients = list(set(map(lambda x: x[PATIENTID], self.lines)))
+        self.num_patients = len(self.patients)
+
+        self.sequential_index = 0
+
+        self.upper, self.lower = train_data.upper, train_data.lower
+
+        self.outlier2nan(self.upper, self.lower)
+
+        self.patient_means = train_data.patient_means
+
+        self.nan2mean(self.patient_means)
+
+        self.max_by_features, self.min_by_features = train_data.max_by_features, train_data.min_by_features
+
+        self.min_max_normalization(self.max_by_features, self.min_by_features)
+
+        self.check_nan()
         return
 
-    def test_batch(self, train_data: TrainData):
+    def min_max_normalization(self, _max, _min):
+        target_features = [AGE, W, PW, BPS, BPD, SPO2, HR, GL]
+        for i in range(self.num_lines):
+            for k, j in enumerate(target_features):
+                value = self.lines[i][j]
+                normalized_value = (value-_min[k]) / (_max[k]-_min[k])
+                self.lines[i][j] = normalized_value
         return
+
+    def check_nan(self):
+        flag = False
+        for i in range(self.num_lines):
+            temp = self.lines[i]
+            for x in temp[GENDER:ALERT]:
+                if np.isnan(x):
+                    print(self.lines[i][PATIENTID], temp)
+                    flag = True
+                    continue
+        if flag:
+            sys.exit(-1)
+        return
+
+    def nan2mean(self, patient_means):
+        for i in range(self.num_lines):
+            temp = self.lines[i]
+            patient = temp[PATIENTID]
+
+            # 지병 여부가 nan 이면 0.0 으로 변환
+            for j in range(DI, W):
+                if np.isnan(temp[j]):
+                    temp[j] = 0.0
+
+            # 수치가 nan 이면 평균값으로 변환
+            for j in range(W, ALERT):
+                if np.isnan(temp[j]):
+                    temp[j] = patient_means[patient][j - W]
+
+            self.lines[i] = temp
+        return
+
+    def outlier2nan(self, upper, lower):
+        for i in range(self.num_lines):
+            temp = self.lines[i][W:ALERT]
+            for j in range(ALERT-W):
+                if temp[j] == np.nan or temp[j] > upper[j] or temp[j] < lower[j]:
+                    temp[j] = np.nan
+            self.lines[i][W:ALERT] = temp
+
+    def test_batch(self, train_data: TrainData):
+        cur_data = self.lines[self.sequential_index]
+        self.sequential_index += 1
+
+        patient_id = cur_data[PATIENTID]
+        cur_time = cur_data[TIMESTAMP]
+
+        time_stamps = [i[1] for i in train_data.group_by_patient[patient_id]]
+        crop_index = bisect.bisect_left(time_stamps, cur_time)
+
+        if crop_index == 0:
+            return (np.array(cur_data[GENDER:ALERT]))[np.newaxis, :]
+
+        index = train_data.patients.index(patient_id)
+
+        x = train_data.x[index, :crop_index]
+        temp = np.array(cur_data[GENDER:ALERT])
+        temp = temp[np.newaxis, :]
+        x = np.concatenate([x, temp])
+        return x
 
 
 if __name__ == '__main__':
     data = TrainData('../_Data/ml_10_medicalalert_train.csv')
+    t_data = TestData('../_Data/ml_10_medicalalert_test.csv', data)
