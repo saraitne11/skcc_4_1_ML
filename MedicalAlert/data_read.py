@@ -110,8 +110,8 @@ def line_preproc(line, is_train=True):
 
 class TrainData:
     def __init__(self, train_csv,
-                 yes_weight=5.0, no_weight=1.0,
-                 upper_percet=99, lower_percent=1):
+                 yes_weight=75.0, no_weight=1.0,
+                 upper_percet=90, lower_percent=20):
         self.yes_weight = yes_weight
         self.no_weight = no_weight
         self.upper_percent = upper_percet
@@ -153,17 +153,23 @@ class TrainData:
         # print(self.num_data)
         # print(self.max_seq_len)
 
-        self.upper, self.lower = self.get_boundary()
-        # print(self.upper)
-        # print(self.lower)
-        # print(np.shape(self.upper), np.shape(self.lower)
+        # =================================================
+        # self.upper, self.lower = self.get_boundary()
+        # =================================================
+        # print_1d_array(self.upper)
+        # print_1d_array(self.lower)
+        # print(np.shape(self.upper), np.shape(self.lower))
 
-        self.outlier2nan(self.upper, self.lower)
+        # =================================================
+        # self.outlier2nan(self.upper, self.lower)
+        # =================================================
         # pprint(self.group_by_patient, width=300)
 
         # 각 환자별, 그리고 피쳐별[W~GL]로 평균
         # 185[환자 수] by 7[피쳐 수]
+        # =================================================
         self.patient_means = self.get_patient_means()
+        # =================================================
         # for patient in self.patients:
         #     print_1d_array(self.patient_means[patient])
         # print(len(self.patient_means))
@@ -340,9 +346,9 @@ class TestData:
 
         self.sequential_index = 0
 
-        self.upper, self.lower = train_data.upper, train_data.lower
+        # self.upper, self.lower = train_data.upper, train_data.lower
 
-        self.outlier2nan(self.upper, self.lower)
+        # self.outlier2nan(self.upper, self.lower)
 
         self.patient_means = train_data.patient_means
 

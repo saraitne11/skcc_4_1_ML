@@ -214,14 +214,23 @@ class UniLSTM:
         s = time.time()
         self.init_model(sess, ckpt)
         predictions = []
+        cnt = 0
         num_data = test_data.num_lines
         end = False
         while not end:
             x, seq_len, end = test_data.test_batch()
             pred = sess.run(self.prediction,
                             feed_dict={self.x: [x], self.seq_len: [seq_len], self.keep_prob: 1.0})
-            print(pred[0][-1])
-            # print('\rTest - %d/%d' % (len(predictions), num_data), end='')
+            predictions.append(pred[0][-1])
+            if pred[0][-1] == 2:
+                cnt += 1
+            print('\rTest - %d/%d, yes count %d' % (len(predictions), num_data, cnt), end='')
 
+        f = open(csv_name, 'w')
+        f.write('alert\n')
+        for p in predictions:
+            f.write('%d\n' % (int(p)-1))
+        f.close()
+        print()
         print('total time: %0.3f sec, %0.3f sec/data' % (time.time()-s, (time.time()-s)/num_data))
         return

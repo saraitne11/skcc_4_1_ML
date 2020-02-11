@@ -11,9 +11,9 @@ dataset = TrainData('../_Data/ml_10_medicalalert_train.csv')
 test_dataset = TestData('../_Data/ml_10_medicalalert_test.csv', dataset)
 
 args = Arguments('LSTM', [300, 300], True, True)
-model = UniLSTM('model1', args)
+model = UniLSTM('model2', args)
 
 sess = tf.Session(config=get_tf_config())
-model.runs(sess, test_dataset, ckpt='step-1000')
+model.runs(sess, test_dataset, ckpt='step-2000', csv_name='result2.csv')
 
 sess.close()
